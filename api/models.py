@@ -51,6 +51,32 @@ class Option(Pricing):
     products = models.ManyToManyField(Product, related_name='options')
 
 
+class Invitation(models.Model):
+
+    seats = models.IntegerField(default=1)
+    email = models.EmailField()
+    first_name = models.TextField(max_length=50)
+    last_name = models.TextField(max_length=50)
+    link_sent = models.BooleanField(blank=True)
+    reason = models.TextField()
+    event = models.ForeignKey(Event, related_name='invitations')
+    products = models.ManyToManyField(Product)
+
+    def is_allowed_to_buy(self, product):
+        if len(self.products) == 0:
+            return True
+        elif self.products.filter(id = product.id).count() > 0:
+            return True
+        else:
+            return False
+
+
+class Billet(models.Model):
+
+    product = models.ForeignKey(Product, related_name='billets')
+    options = models.ManyToManyField(Option, related_name='billets')
+
+
 class PricingRule(models.Model):
 
     RULES = (
@@ -63,3 +89,39 @@ class PricingRule(models.Model):
     description = models.TextField()
     value = models.IntegerField()
     pricings = models.ManyToManyField(Pricing, related_name='rules')
+
+
+class Participant(models.Model):
+
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    email = models.CharField(max_length=255)
+    phone = models.CharField(max_length=255)
+    billet = models.ForeignKey(Billet, related_name='participants')
+
+
+class Question(models.Model):
+
+    QUESTIONS_TYPES = (
+        (0, _('Champ libre')),
+        (1, _('Champ libre (long)')),
+        (2, _('Choix multiple')),
+        (3, _('Choix multiple et libre')),
+        (4, _('Choix')),
+        (5, _('Date')),
+        (6, _('Date et heure')),
+        (7, _('Heure')),
+    )
+
+    question = models.CharField(max_length=255)
+    help_text = models.TextField()
+    question_type = models.IntegerField(verbose_name=_('type de question'))
+    required = models.BooleanField(null=True)
+    related_prices = models.ManyToManyField(Pricing, related_name='related_questions')
+
+
+class Response(models.Model):
+
+    question = models.ForeignKey(Question)
+    participant = models.ForeignKey(Participant)
+    data = models.TextField()
