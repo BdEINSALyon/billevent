@@ -6,3 +6,5 @@ Pillow==4.3.0
 pytz==2017.2
 hmac
 hashlib
+
+Pour installer Pillow : python3-dev libtiff5-dev libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libharfbuzz-dev libfribidi-dev tcl8.6-dev tk8.6-dev python-tk
