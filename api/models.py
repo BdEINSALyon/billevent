@@ -64,3 +64,13 @@ class PricingRule(models.Model):
     value = models.IntegerField()
     pricings = models.ManyToManyField(Pricing, related_name='rules')
 
+
+class PaymentMethod(models.Model):
+    PROTOCOLS = (
+        ("CB", _("payment by Credit Card")),
+        ("ESP", _("payment by cash")),
+        ("VIR", _("payment by bank transfer"))
+    )
+    paymentProtocol = models.CharField(max_length=50, choices=PROTOCOLS)
+    paymentMin = models.IntegerField(default=-1000000)
+    paymentMax = models.IntegerField(default=1000000)
