@@ -74,3 +74,4 @@ class PaymentMethod(models.Model):
     paymentProtocol = models.CharField(max_length=50, choices=PROTOCOLS)
     paymentMin = models.IntegerField(default=-1000000)
     paymentMax = models.IntegerField(default=1000000)
+
