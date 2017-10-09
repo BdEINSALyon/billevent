@@ -63,9 +63,3 @@ class PricingRule(models.Model):
     description = models.TextField()
     value = models.IntegerField()
     pricings = models.ManyToManyField(Pricing, related_name='rules')
-
-
-class Event(models.Model):
-    eventName = models.CharField(max_length=30)
-    invitRequired = models.BooleanField()
-    eventGauge = models.IntegerField()
