@@ -23,8 +23,4 @@ def generate_ticket(request):
     p.showPage()
     p.save()
 
-    # Get the value of the BytesIO buffer and write it to the response.
-    pdf = buffer.getvalue()
-    buffer.close()
-    response.write(pdf)
     return response
