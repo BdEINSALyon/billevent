@@ -15,8 +15,8 @@ def generate_ticket(request):
 
     # Draw things on the PDF. Here's where the PDF generation happens.
     # See the ReportLab documentation for the full list of functionality.
-    p.drawString(0, 0, "Hello world. ")
-    im = p.drawImage("ticketgenerator/bde.png", 0,0, width=75,height=100,mask=None)
+    p.drawString(50, A4[0]-50, "Hello world.")
+    p.drawImage("ticketgenerator/bde.png", A4[1]-125,A4[0]-150, width=75,height=100,mask=None)
 
 
 
