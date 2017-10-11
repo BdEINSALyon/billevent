@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 # Create your views here.
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 
@@ -11,12 +11,13 @@ def generate_ticket(request):
     response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
 
     # Create the PDF object, using the response object as its "file."
-    p = canvas.Canvas(response, pagesize=A4)
+    p = canvas.Canvas(response, pagesize=landscape(A4))
 
     # Draw things on the PDF. Here's where the PDF generation happens.
     # See the ReportLab documentation for the full list of functionality.
-    p.drawString(50, 800, "Hello world. ")
-    p.drawImage("ticketgenerator/bde.png", 0,0, width=None,height=None,mask=None)
+    p.drawString(0, 0, "Hello world. ")
+    im = p.drawImage("ticketgenerator/bde.png", 0,0, width=75,height=100,mask=None)
+
 
 
     # Close the PDF object cleanly.
