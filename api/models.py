@@ -23,6 +23,9 @@ class Event(models.Model):
     logo_url = models.CharField(max_length=2500, default='http://logos.bde-insa-lyon.fr/bal/Logo_bal.png', blank=True,
                                 null=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Pricing(models.Model):
     class Meta:
@@ -32,9 +35,8 @@ class Pricing(models.Model):
     name = models.CharField(max_length=255)
     price_ht = models.DecimalField(verbose_name=_('Prix HT'), decimal_places=2, max_digits=11)
     price_ttc = models.DecimalField(verbose_name=_('Prix TTC'), decimal_places=2, max_digits=11)
-    max_seats = models.IntegerField(default=1600, verbose_name=_('Nombre maximal de place'))
-    pricings = models.ManyToManyField("PricingRule")
-    questions = models.ManyToManyField("Question")
+    rules = models.ManyToManyField("PricingRule", blank=True)
+    questions = models.ManyToManyField("Question", blank=True)
     event = models.ForeignKey(Event, verbose_name=_('Evènement'))
 
     def full_name(self):
@@ -45,10 +47,15 @@ class Pricing(models.Model):
 
 
 class Product(Pricing):
-    pass
+
+    class Meta:
+        verbose_name = _('Tarif de billet')
 
 
 class Option(Pricing):
+
+    class Meta:
+        verbose_name = _('Tarif d\'option')
 
     products = models.ManyToManyField(Product, related_name='options')
 
@@ -57,12 +64,12 @@ class Invitation(models.Model):
 
     seats = models.IntegerField(default=1)
     email = models.EmailField()
-    first_name = models.TextField(max_length=50)
-    last_name = models.TextField(max_length=50)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     link_sent = models.BooleanField(blank=True)
-    reason = models.TextField()
+    reason = models.TextField(blank=True)
     event = models.ForeignKey(Event, related_name='invitations')
-    products = models.ManyToManyField(Product)
+    products = models.ManyToManyField(Product, blank=True)
 
     def is_allowed_to_buy(self, product):
         if len(self.products) == 0:
