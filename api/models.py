@@ -32,8 +32,10 @@ class Pricing(models.Model):
     name = models.CharField(max_length=255)
     price_ht = models.DecimalField(verbose_name=_('Prix HT'), decimal_places=2, max_digits=11)
     price_ttc = models.DecimalField(verbose_name=_('Prix TTC'), decimal_places=2, max_digits=11)
-    event = models.ForeignKey(Event, verbose_name=_('Evènement'), related_name='entries')
     max_seats = models.IntegerField(default=1600, verbose_name=_('Nombre maximal de place'))
+    pricings = models.ManyToManyField("PricingRule")
+    questions = models.ManyToManyField("Question")
+    event = models.ForeignKey(Event, verbose_name=_('Evènement'))
 
     def full_name(self):
         return '{} - {}€'.format(self.name, self.price_ttc)
@@ -88,7 +90,6 @@ class PricingRule(models.Model):
     type = models.CharField(max_length=50, choices=RULES)
     description = models.TextField()
     value = models.IntegerField()
-    pricings = models.ManyToManyField(Pricing, related_name='rules')
 
 
 class Participant(models.Model):
@@ -116,8 +117,7 @@ class Question(models.Model):
     question = models.CharField(max_length=255)
     help_text = models.TextField()
     question_type = models.IntegerField(verbose_name=_('type de question'))
-    required = models.BooleanField(null=True)
-    related_prices = models.ManyToManyField(Pricing, related_name='related_questions')
+    required = models.BooleanField(default=False)
 
 
 class Response(models.Model):
