@@ -5,6 +5,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 
+
 def generate_ticket(request):
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')
@@ -17,8 +18,6 @@ def generate_ticket(request):
     # See the ReportLab documentation for the full list of functionality.
     p.drawString(50, A4[0]-50, "Hello world.")
     p.drawImage("ticketgenerator/bde.png", A4[1]-125,A4[0]-150, width=75,height=100,mask=None)
-
-
 
     # Close the PDF object cleanly.
     p.showPage()

@@ -1,10 +1,7 @@
+reportlab
 Django==1.11.6
 django-webpack-loader==0.5.0
 djangorestframework==3.7.0
 olefile==0.44
 Pillow==4.3.0
 pytz==2017.2
-hmac
-hashlib
-
-Pour installer Pillow : python3-dev libtiff5-dev libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libharfbuzz-dev libfribidi-dev tcl8.6-dev tk8.6-dev python-tk
