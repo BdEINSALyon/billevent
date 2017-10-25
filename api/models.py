@@ -26,6 +26,10 @@ class Event(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def products(self):
+        return self.product_set
+
 
 class Pricing(models.Model):
     class Meta:
