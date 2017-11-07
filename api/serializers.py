@@ -21,14 +21,14 @@ class PricingRuleSerializer(serializers.ModelSerializer):
     class Meta:
         read_only = True
         model = models.PricingRule
-        fields = ('type', 'value')
+        fields = ('id', 'type', 'value')
 
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         read_only = True
         model = models.Question
-        fields = ('question', 'help_text', 'question_type', 'required')
+        fields = ('id', 'question', 'help_text', 'question_type', 'required')
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -37,7 +37,7 @@ class OptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Option
-        fields = ('name',
+        fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules',
                   'questions', 'event')
@@ -50,7 +50,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Product
-        fields = ('name',
+        fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules', 'options',
                   'questions', 'event')
@@ -61,7 +61,7 @@ class EventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Event
-        fields = ('name', 'description',
+        fields = ('id', 'name', 'description',
                   'sales_opening', 'sales_closing',
                   'logo_url', 'products')
         depth = 10
