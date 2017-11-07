@@ -19,8 +19,9 @@
     import hello from './hello.vue'
     import hallo from './hallo.vue'
     import Vue from "vue";
+    import API from "../billevent/api";
 
-
+    window.BAPI = API;
 
     export default {
         name: 'app',

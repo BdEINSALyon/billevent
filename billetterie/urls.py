@@ -20,5 +20,5 @@ urlpatterns = [
     url(r'^api/', include('api.urls')),
     url(r'^admin/', admin.site.urls),
     url(r'^ticketgenerator/', include('ticketgenerator.urls')),
-    #url(r'^', include('frontend.urls')),
+    url(r'^', include('frontend.urls')),
 ]
