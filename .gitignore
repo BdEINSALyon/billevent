@@ -181,3 +181,4 @@ venv.bak/
 # End of https://www.gitignore.io/api/python,django,pycharm
 
 node_modules
+static/client.js
