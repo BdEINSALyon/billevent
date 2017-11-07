@@ -65,3 +65,11 @@ class EventSerializer(serializers.ModelSerializer):
                   'sales_opening', 'sales_closing',
                   'logo_url', 'products')
         depth = 10
+
+
+class OrderSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Order
+        fields = ('id', 'client', 'event', 'billets')
+        depth = 10

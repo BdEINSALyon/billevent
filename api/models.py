@@ -148,3 +148,9 @@ class PaymentMethod(models.Model):
     paymentMin = models.IntegerField(default=-1000000)
     paymentMax = models.IntegerField(default=1000000)
 
+
+class Order(models.Model):
+
+    client = models.ForeignKey(Participant, blank=True, null=True)
+    billets = models.ManyToManyField(Billet, blank=True)
+    event = models.ForeignKey(Event)
