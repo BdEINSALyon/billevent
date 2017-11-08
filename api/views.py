@@ -39,7 +39,7 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
             request.session[order_id] = order.id
         return Response(OrderSerializer(order).data)
 
+
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Option.objects.all()
     serializer_class = OptionSerializer
-

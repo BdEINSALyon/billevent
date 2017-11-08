@@ -74,9 +74,3 @@ class OrderSerializer(serializers.ModelSerializer):
         model = models.Order
         fields = ('id', 'client', 'event', 'billets')
         depth = 10
-
-class OptionSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True)
-    class Meta:
-        model = models.Option
-        fields = ('id','name','price_ht','price_ttc','questions','event')
