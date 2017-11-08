@@ -9,6 +9,7 @@ const events = {};
 export default class Event {
 
     constructor(event){
+        if(typeof event === 'number') return events[event];
         if(events.hasOwnProperty(event.id.toString())) {
             // If we already has loaded the object, use the previous one
             return events[event.id];

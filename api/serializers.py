@@ -68,6 +68,7 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    event = EventSerializer(read_only=True)
 
     class Meta:
         model = models.Order

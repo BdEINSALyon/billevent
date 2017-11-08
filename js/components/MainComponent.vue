@@ -4,12 +4,13 @@
 
 <script>
 export default {
-    name: 'hallo',
+    name: 'main_component',
   data () {
-    console.log("Hello World!");
-        return {
-      msg: 'Hallo world!'
-    }
+    return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({msg: 'hello'})
+        }, 2000);
+    })
   }
 }
 </script>

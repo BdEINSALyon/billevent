@@ -1,11 +1,13 @@
 import Vue from 'vue'
-import hello from './components/hello.vue'
-import Billetterie from './components/Billetterie.vue'
+import App from './components/App.vue'
+import MainComponent from './components/MainComponent.vue'
+
 
 new Vue({
     el: '#app',
     components: {
-        'app': Billetterie
+        'app': App,
+        'main': MainComponent
     }
 });
 console.log("Hello World2!");
