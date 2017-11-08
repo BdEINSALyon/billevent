@@ -50,7 +50,7 @@ _.loadersOptions = () => {
           scss: generateLoader(['sass-loader?sourceMap']),
           less: generateLoader(['less-loader?sourceMap']),
           stylus: generateLoader(['stylus-loader?sourceMap']),
-          js: 'babel-loader'
+          js: ['babel-loader',"source-map-loader"]
         }
       }
     }
@@ -94,12 +94,12 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        loaders: ['babel-loader'],
+        loaders: ['babel-loader', "source-map-loader"],
         exclude: [/node_modules/]
       },
       {
         test: /\.es6$/,
-        loaders: ['babel-loader']
+        loaders: ['babel-loader', "source-map-loader"]
       },
       {
         test: /\.(ico|jpg|png|gif|eot|otf|webp|ttf|woff|woff2)(\?.*)?$/,

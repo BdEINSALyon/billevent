@@ -13,7 +13,6 @@ export default class Order {
     billets = [];
 
     constructor(response) {
-        console.log(response);
         this.id = response.id;
         this.client = response.client ? new Client(response.client) : null;
         this.event = new Event(response.event);
@@ -22,7 +21,7 @@ export default class Order {
     }
 
     static load(event) {
-        return rest.wrap(mime)('/api/events/' + event + '/order').then(
+        return rest.wrap(mime)('/api/events/' + event + '/order/').then(
             (response) => {
                 return new Order(response.entity)
             },
