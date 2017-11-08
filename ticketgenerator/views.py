@@ -4,6 +4,7 @@ from django.shortcuts import render
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
+from reportlab.lib.units import mm
 
 
 def generate_ticket(request):
@@ -16,8 +17,10 @@ def generate_ticket(request):
 
     # Draw things on the PDF. Here's where the PDF generation happens.
     # See the ReportLab documentation for the full list of functionality.
-    p.drawString(50, A4[0]-50, "Hello world.")
-    p.drawImage("ticketgenerator/bde.png", A4[1]-125,A4[0]-150, width=75,height=100,mask=None)
+    p.rect(20*mm, A4[0]-(20+45.70)*mm, 62.70*mm, 45.70*mm, stroke=1, fill=0)
+    p.drawString((20+62.70*0.1)*mm, A4[0]-(20+45.70*0.5)*mm, "Je suis un code barre !")
+    p.drawImage("ticketgenerator/bde.png", A4[1]-(20+22.53)*mm,A4[0]-(20+30)*mm, width=22.53*mm,height=30*mm,mask=None)
+    p.drawString(90*mm, 20*mm, "Billet vendu et édité par le BdE INSA Lyon, 20 avenue Albert Einstein, 69621 Villeurbanne CEDEX")
 
     # Close the PDF object cleanly.
     p.showPage()
