@@ -5,11 +5,13 @@ django-proxy==1.1.0
 django-seed==0.1.7
 django-webpack-loader==0.5.0
 djangorestframework==3.7.0
+djangorestframework-jwt==1.11.0
 drf-nested-routers==0.90.0
 Faker==0.8.6
 idna==2.6
 olefile==0.44
 Pillow==4.3.0
+PyJWT==1.5.3
 python-dateutil==2.6.1
 pytz==2017.2
 reportlab==3.4.0
