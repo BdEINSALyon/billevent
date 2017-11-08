@@ -6,6 +6,7 @@ router = routers.SimpleRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
 router.register(r'events', views.EventsViewSet)
+router.register(r'options',views.OptionViewSet, "AHHHHHHH")
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.

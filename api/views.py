@@ -3,8 +3,8 @@ from rest_framework import viewsets
 from rest_framework.decorators import detail_route
 from rest_framework.response import Response
 
-from api.models import Event, Order
-from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer
+from api.models import Event, Order, Option
+from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -38,4 +38,8 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
             order.save()
             request.session[order_id] = order.id
         return Response(OrderSerializer(order).data)
+
+class OptionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Option.objects.all()
+    serializer_class = OptionSerializer
 
