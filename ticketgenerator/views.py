@@ -5,7 +5,8 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 from reportlab.lib.units import mm
-
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.barcode import createBarcodeDrawing
 
 def generate_ticket(request):
     uid = "MAO0RTFM"
@@ -35,9 +36,11 @@ def generate_ticket(request):
     # See the ReportLab documentation for the full list of functionality.
     qr_x = 85.60
     qr_y = 53.98
+    p.drawImage("ticketgenerator/background.png", 0 * mm, 0 * mm, width=373*mm, height=210*mm, mask=None)
     p.setFont("Helvetica", 12)
-    p.rect(20 * mm, A4[0] - (20 + qr_y) * mm, qr_x * mm, qr_y * mm, stroke=1, fill=0)
-    p.drawString((20 + qr_x * 0.1) * mm, A4[0] - (20 + qr_y * 0.5) * mm, "Je suis un code barre !")
+    p.setStrokeColorRGB(255,255,255)
+    p.setFillColorRGB(255, 255, 255)
+
     p.drawString(20 * mm, A4[0] - (20 + qr_y + 10) * mm, "{}".format(holder_last_name))
     p.drawString(20 * mm, A4[0] - (20 + qr_y + 20) * mm, "{}".format(holder_first_name))
     p.drawString(20 * mm, A4[0] - (20 + qr_y + 30) * mm, "Statut : {}".format(status))
