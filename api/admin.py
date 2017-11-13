@@ -3,6 +3,7 @@ from . import models
 
 
 @admin.register(models.Event,
+                models.Organizer,
                 models.PricingRule,
                 models.Product, models.Option,
                 models.Billet,
