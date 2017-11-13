@@ -21,7 +21,7 @@ schema_view = get_swagger_view(title='Billevent API')
 
 
 urlpatterns = [
-    url(r'^', include('api.urls')),
+    url(r'^api/', include('api.urls')),
     url(r'^admin/', admin.site.urls),
     url(r'^swagger/', schema_view),
     url(r'^admin/', admin.site.urls),

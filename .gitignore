@@ -159,6 +159,7 @@ celerybeat-schedule
 # Environments
 .env
 .venv
+.venv*
 env/
 venv/
 ENV/
@@ -179,3 +180,7 @@ venv.bak/
 .mypy_cache/
 
 # End of https://www.gitignore.io/api/python,django,pycharm
+
+node_modules
+static/client.js
+db.sqlite3.demo
