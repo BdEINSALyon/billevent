@@ -2,7 +2,6 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
 from api import models
-from api.models import Event
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -56,14 +55,22 @@ class ProductSerializer(serializers.ModelSerializer):
                   'questions', 'event')
 
 
+class OrganizerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Organizer
+        fields = ('id', 'name', 'phone', 'address', 'email')
+
+
 class EventSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True, read_only=True)
+    organizer = OrganizerSerializer()
 
     class Meta:
         model = models.Event
         fields = ('id', 'name', 'description',
                   'sales_opening', 'sales_closing',
-                  'logo_url', 'products')
+                  'start_time', 'end_time',
+                  'website', 'address', 'organizer',
+                  'logo_url')
         depth = 10
 
 
