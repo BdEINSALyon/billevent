@@ -1,9 +1,9 @@
 from django.contrib.auth.models import User, Group
-from rest_framework import viewsets
-from rest_framework.decorators import detail_route
+from rest_framework import viewsets, status
+from rest_framework.decorators import detail_route, api_view
 from rest_framework.response import Response
 
-from api.models import Event, Order, Option
+from api.models import Event, Order, Option, Product
 from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer
 
 
@@ -23,7 +23,28 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
             request.session[order_id] = order.id
         return Response(OrderSerializer(order).data)
 
-
+"""
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Option.objects.all()
     serializer_class = OptionSerializer
+
+"""
+
+
+
+@api_view(['GET'])
+def products_list(request, event):
+    """
+
+    :param request:
+    :param event: L'évenement dont on veut les produits
+    :return: 404 or liste des produits
+    """
+    try:
+        products = Product.objects.filter(event=event);
+    except Product.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response(OptionSerializer(products,many="true").data)
+
