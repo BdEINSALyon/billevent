@@ -4,7 +4,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import detail_route, api_view
 from rest_framework.response import Response
 
-from api.models import Event, Order, Option, Product
+from api.models import Event, Order, Option, Product, Billet, PricingRule
 from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer
 
 
@@ -83,3 +83,24 @@ def option_by_product(request, product_id):
 
     if request.method == "GET":
         return Response(OptionSerializer(options,many="true").data)
+
+@api_view(['GET'])
+def canBuyOneMore(request, product_id):
+    """
+    Allow the user to know if there are still availables billets
+
+    :param request:
+    :param id: The id of the product
+    :return: Le nombre de billets restants, 999999 si il n'existe pas de limite, -999 si une erreur est détectée
+    """
+
+
+    try:
+        BilletsMax = Product.objects.get(id=product_id).rules.get(type="T").value
+        nombreBillet = Billet.objects.filter(product=product_id).count()
+
+    except Product.DoesNotExist:
+        return Response(999999)
+    except Billet.DoesNotExist:
+        return Response(999999)
+    return  Response(BilletsMax-nombreBillet)

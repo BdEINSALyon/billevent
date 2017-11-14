@@ -14,4 +14,5 @@ urlpatterns = [
     url(r'products/list/(?P<event>[0-9]+)',views.products_list, name="product-list"),
     url(r'products/(?P<id>[0-9]+)',views.products_by_id,name="product-by-id"),
     url(r'options/list_by_product/(?P<product_id>[0-9]+)',views.option_by_product,name="option-by-product"),
+    url(r'products/can_buy_one_more/(?P<product_id>[0-9]+)',views.canBuyOneMore,name="can-buy-one"),
 ]

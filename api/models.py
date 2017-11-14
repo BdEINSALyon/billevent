@@ -105,6 +105,11 @@ class Billet(models.Model):
 
 
 class PricingRule(models.Model):
+    """
+    :var type: Le type de règle
+    :var description: Sa description
+    :var value: ...
+     """
     RULES = (
         ("BYI", _("Limit by product by invitation")),
         ("BYTI", _("Limit by total product by invitation")),
@@ -115,10 +120,12 @@ class PricingRule(models.Model):
     description = models.TextField()
     value = models.IntegerField()
 
+    def __str__(self):
+        return str(self.type)+" "+ str(self.value);
 
 class Participant(models.Model):
     first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
+    last_name= models.CharField(max_length=255)
     email = models.CharField(max_length=255)
     phone = models.CharField(max_length=255)
     billet = models.ForeignKey(Billet, related_name='participants')
