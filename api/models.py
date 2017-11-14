@@ -6,6 +6,13 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 
+class Organizer(models.Model):
+    name = models.CharField(max_length=250)
+    phone = models.CharField(max_length=15, blank=True)
+    address = models.CharField(max_length=250, blank=True)
+    email = models.EmailField()
+
+
 class Event(models.Model):
     class Meta:
         verbose_name = _('Evènement')
@@ -13,7 +20,6 @@ class Event(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     ticket_background = models.ImageField(verbose_name=_("Fond d'image tickets"), blank=True)
-    groups = models.ManyToManyField(Group)
     sales_opening = models.DateTimeField(default=datetime.now)
     sales_closing = models.DateTimeField(default=datetime.now)
     # Un seats est unique pour un seul participant
@@ -22,6 +28,17 @@ class Event(models.Model):
     seats_goal = models.IntegerField(default=1600)
     logo_url = models.CharField(max_length=2500, default='http://logos.bde-insa-lyon.fr/bal/Logo_bal.png', blank=True,
                                 null=True)
+    organizer = models.ForeignKey(Organizer, related_name='events', blank=True, null=True)
+    # Ouverture des portes
+    start_time = models.DateTimeField(default=datetime.now)
+    # Fermeture de l'évènement
+    end_time = models.DateTimeField(default=datetime.now)
+    # Site web de l'évènement
+    website = models.CharField(max_length=250, blank=True,
+                               null=True)
+    # Lieu de l'évènement
+    address = models.CharField(max_length=250, blank=True,
+                               null=True)
 
     def __str__(self):
         return self.name
@@ -37,6 +54,7 @@ class Pricing(models.Model):
         abstract = True
 
     name = models.CharField(max_length=255)
+    seats = models.IntegerField(default=1)
     price_ht = models.DecimalField(verbose_name=_('Prix HT'), decimal_places=2, max_digits=11)
     price_ttc = models.DecimalField(verbose_name=_('Prix TTC'), decimal_places=2, max_digits=11)
     rules = models.ManyToManyField("PricingRule", blank=True)
@@ -51,13 +69,11 @@ class Pricing(models.Model):
 
 
 class Product(Pricing):
-
     class Meta:
         verbose_name = _('Tarif de billet')
 
 
 class Option(Pricing):
-
     class Meta:
         verbose_name = _('Tarif d\'option')
 
@@ -65,7 +81,6 @@ class Option(Pricing):
 
 
 class Invitation(models.Model):
-
     seats = models.IntegerField(default=1)
     email = models.EmailField()
     first_name = models.CharField(max_length=50)
@@ -78,20 +93,18 @@ class Invitation(models.Model):
     def is_allowed_to_buy(self, product):
         if len(self.products) == 0:
             return True
-        elif self.products.filter(id = product.id).count() > 0:
+        elif self.products.filter(id=product.id).count() > 0:
             return True
         else:
             return False
 
 
 class Billet(models.Model):
-
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
 
 
 class PricingRule(models.Model):
-
     RULES = (
         ("BYI", _("Limit by product by invitation")),
         ("BYTI", _("Limit by total product by invitation")),
@@ -104,7 +117,6 @@ class PricingRule(models.Model):
 
 
 class Participant(models.Model):
-
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.CharField(max_length=255)
@@ -113,7 +125,6 @@ class Participant(models.Model):
 
 
 class Question(models.Model):
-
     QUESTIONS_TYPES = (
         (0, _('Champ libre')),
         (1, _('Champ libre (long)')),
@@ -132,7 +143,6 @@ class Question(models.Model):
 
 
 class Response(models.Model):
-
     question = models.ForeignKey(Question)
     participant = models.ForeignKey(Participant)
     data = models.TextField()
@@ -150,7 +160,6 @@ class PaymentMethod(models.Model):
 
 
 class Order(models.Model):
-
     client = models.ForeignKey(Participant, blank=True, null=True)
     billets = models.ManyToManyField(Billet, blank=True)
     event = models.ForeignKey(Event)
