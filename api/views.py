@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User, Group
+from httplib2 import Response
 from rest_framework import viewsets, status
 from rest_framework.decorators import detail_route, api_view
 from rest_framework.response import Response
@@ -48,3 +49,37 @@ def products_list(request, event):
     if request.method == "GET":
         return Response(OptionSerializer(products,many="true").data)
 
+
+
+@api_view(['GET'])
+def products_by_id(request, id):
+    """
+
+    :param request:
+    :param id: L'ID du produit que l'on souhaite avoir
+    :return: 404 ou le produit demandé
+    """
+    try:
+        product = Product.objects.filter(id=id);
+    except Product.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response(OptionSerializer(product).data)
+
+@api_view(['GET'])
+def option_by_product(request, product_id):
+    """
+
+    :param request:
+    :param product_id: L'id du produit auquel sont reliées les options
+    :return: 404 ou la liste des produits
+    """
+
+    try:
+        options = Option.objects.filter(products=product_id)
+    except Option.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response(OptionSerializer(options,many="true").data)
