@@ -1,10 +1,11 @@
 # Billetterie
 ### Variables d'environnement : 
+```
 MERCANET_INTERFACE_VERSION = IR_WS_2.18
-
 MERCANET_KEY_VERSION = 1
-
 MERCANET_MERCHANT_ID = le numéro secret donné par Mercanet
+MERCANET_SECRET_KEY = la clé secrète, gaffe !
+```
 
 Application de création de billetterie d'évènement en ligne
 
