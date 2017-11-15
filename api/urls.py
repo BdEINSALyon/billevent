@@ -11,6 +11,7 @@ router.register(r'events', views.EventsViewSet)
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^token-auth/', obtain_jwt_token),
+    url(r'^authenticate', obtain_jwt_token),
     url(r'^token-refresh/', refresh_jwt_token),
     url(r'^', include(router.urls)),
     url(r'^', include('rest_framework.urls', namespace='rest_framework')),
