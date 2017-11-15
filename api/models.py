@@ -70,6 +70,28 @@ class Pricing(models.Model):
     def full_name(self):
         return '{} - {}€'.format(self.name, self.price_ttc)
 
+    @property
+    def can_buy_one_more(self) -> bool:
+        """
+
+        :return: Si l'utilisateur peut en acheter un de plus
+        """
+        try:
+            billets_max = type(self).objects.get(id=self.id).rules.get(type=PricingRule.TYPE_T).value
+            nombre_billet = Billet.objects.filter(product=self.id).count()
+
+        except type(self).DoesNotExist:
+            return False
+        except PricingRule.DoesNotExist:
+            return True
+        except Billet.DoesNotExist:
+            return True
+        else:
+            if billets_max - nombre_billet > 0:
+                return True
+            else:
+                return False
+
     def __str__(self):
         return self.name
 
@@ -116,22 +138,27 @@ class PricingRule(models.Model):
     :var description: Sa description
     :var value: ...
      """
+    TYPE_T = "T"
+    TYPE_BYTI = "BYTI"
+    TYPE_BYI = "BYI"
+    TYPE_VA = "VA"
     RULES = (
-        ("BYI", _("Limit by product by invitation")),
-        ("BYTI", _("Limit by total product by invitation")),
-        ("T", _("Global gap of product")),
-        ("VA", _("Require VA validation (not implemented)"))
+        (TYPE_BYI, _("Limit by product by invitation")),
+        (TYPE_BYTI, _("Limit by total product by invitation")),
+        (TYPE_T, _("Global gap of product")),
+        (TYPE_VA, _("Require VA validation (not implemented)"))
     )
     type = models.CharField(max_length=50, choices=RULES)
     description = models.TextField()
     value = models.IntegerField()
 
     def __str__(self):
-        return str(self.type)+" "+ str(self.value);
+        return str(self.type) + " " + str(self.value);
+
 
 class Participant(models.Model):
     first_name = models.CharField(max_length=255)
-    last_name= models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
     email = models.CharField(max_length=255)
     phone = models.CharField(max_length=255)
     billet = models.ForeignKey(Billet, related_name='participants')
