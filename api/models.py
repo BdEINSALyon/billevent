@@ -7,10 +7,16 @@ from django.utils.translation import ugettext_lazy as _
 
 
 class Organizer(models.Model):
+    class Meta:
+        verbose_name = _('Organisateur')
+
     name = models.CharField(max_length=250)
     phone = models.CharField(max_length=15, blank=True)
     address = models.CharField(max_length=250, blank=True)
     email = models.EmailField()
+
+    def __str__(self):
+        return self.name
 
 
 class Event(models.Model):
