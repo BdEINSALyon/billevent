@@ -5,7 +5,6 @@ from . import views
 
 router = routers.SimpleRouter()
 router.register(r'events', views.EventsViewSet)
-router.register(r'options', views.OptionViewSet)
 
 
 # Wire up our API using automatic URL routing.
