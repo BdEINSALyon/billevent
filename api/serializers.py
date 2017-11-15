@@ -69,7 +69,7 @@ class EventSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'description',
                   'sales_opening', 'sales_closing',
                   'start_time', 'end_time',
-                  'website', 'address', 'organizer',
+                  'website', 'place', 'address', 'organizer',
                   'logo_url')
         depth = 10
 
