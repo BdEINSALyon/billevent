@@ -84,9 +84,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class BilletSerializer(serializers.ModelSerializer):
+
     product = ProductSerializer(read_only=True)
     options = OptionSerializer(read_only=True, many=True)
 
     class Meta:
         model = models.Billet
         fields = ('id', 'product', 'options')
+

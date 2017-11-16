@@ -11,6 +11,7 @@ from . import models
                 models.PaymentMethod,
                 models.Question,
                 models.Response,
-                models.Categorie)
+                models.Categorie,
+                models.Participant)
 class BasicAdmin(admin.ModelAdmin):
     pass

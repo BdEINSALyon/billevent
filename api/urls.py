@@ -7,7 +7,7 @@ router = routers.SimpleRouter()
 router.register(r'events', views.EventsViewSet)
 router.register(r'products',views.ProductViewSet, 'products')
 router.register(r'options',views.ProductViewSet, 'options')
-router.register(r'billet',views.BilletViewSet,'billet')
+router.register(r'billets',views.BilletViewSet,'billet')
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [

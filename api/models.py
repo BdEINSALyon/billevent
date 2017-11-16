@@ -165,6 +165,7 @@ class PricingRule(models.Model):
     description = models.TextField()
     value = models.IntegerField()
 
+
     def __str__(self):
         return str(self.type) + " " + str(self.value)
 
