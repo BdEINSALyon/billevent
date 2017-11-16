@@ -5,12 +5,13 @@ from django.http import HttpResponseNotFound
 # from httplib2 import Response
 from rest_framework import viewsets, status
 from rest_framework.decorators import detail_route, api_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, PricingRule, Question, Participant
-from api.serializers import BilletSerializer
+from api.models import Event, Order, Option, Product, Billet, PricingRule, Question, Participant, Categorie
+from api.serializers import BilletSerializer, CategorieSerializer
 from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
@@ -32,6 +33,10 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
             request.session[order_id] = order.id
         return Response(OrderSerializer(order).data)
 
+    @detail_route(methods=['get'])
+    def categorie(self,request,pk=None):
+        event = self.get_object()
+        return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(),many=True).data)
 
 """
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -79,16 +84,20 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class BilletViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     serializer_class = BilletSerializer
     queryset = Billet.objects.all()
 
     def retrieve(self, request, pk=None,*args, **kwargs):
         return Response(BilletSerializer(self.queryset.filter(id=pk).get()).data)
 
-    def create(self, request, *args, **kwargs):
-        billet = BilletSerializer(data=request.data)
+    # def create(self, request, *args, **kwargs):
+    #     billet = BilletSerializer(data=request.data)
+    #     if billet.is_valid():
+    #         billet.save()
+    #         if Product.objects.get(id=billet.data.product.data.id).can_buy_one_more:
+    #
+    #             return Response(billet.data, status=status.HTTP_201_CREATED)
+    #     return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if billet.is_valid() and Billet.objects.get(billet.id).product.can_buy_one_more:
-            billet.save()
-            return Response(billet.data, status=status.HTTP_201_CREATED)
-        return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+

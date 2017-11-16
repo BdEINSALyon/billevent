@@ -58,6 +58,7 @@ class Event(models.Model):
 class Categorie(models.Model):
     name = models.CharField(max_length=50)
     desc = models.CharField(max_length=255, blank=True)
+    event = models.ForeignKey(Event,verbose_name=_('Evènements'))
 
     def __str__(self):
         return self.name
