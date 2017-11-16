@@ -15,5 +15,5 @@ class TransactionMercanet(object):
         self.orderChannel = "INTERNET"
         self.transactionReference = transactionReference
         self.Seal = sealTransaction(amount, interfaceVersion, merchantId, normalReturnUrl, transactionReference)
-    seralizer_class = TransactionMercanetSerializer
-#on ne hash pas la version de la clé ni l'algo utilisé (doc Mercanet)
+    seralizer_class = TransactionMercanetSerializer #on ne hash pas la version de la clé ni l'algo utilisé (doc Mercanet)
+
