@@ -141,6 +141,9 @@ class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
 
+    def __str__(self):
+        return str(self.id)
+
 
 class PricingRule(models.Model):
     class Meta:
