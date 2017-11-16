@@ -55,12 +55,21 @@ class Event(models.Model):
         return self.product_set
 
 
+class Categorie(models.Model):
+    name = models.CharField(max_length=50)
+    desc = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Pricing(models.Model):
     class Meta:
         verbose_name = _('Tarification')
         abstract = True
 
     name = models.CharField(max_length=255)
+    categorie = models.ForeignKey(Categorie, default=1, verbose_name=_('Catégorie'))
     seats = models.IntegerField(default=1)
     price_ht = models.DecimalField(verbose_name=_('Prix HT'), decimal_places=2, max_digits=11)
     price_ttc = models.DecimalField(verbose_name=_('Prix TTC'), decimal_places=2, max_digits=11)
@@ -213,3 +222,5 @@ class Order(models.Model):
     client = models.ForeignKey(Participant, blank=True, null=True)
     billets = models.ManyToManyField(Billet, blank=True)
     event = models.ForeignKey(Event)
+
+

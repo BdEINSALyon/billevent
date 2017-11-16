@@ -9,6 +9,8 @@ from . import models
                 models.Billet,
                 models.Invitation,
                 models.PaymentMethod,
-                models.Question, models.Response)
+                models.Question,
+                models.Response,
+                models.Categorie)
 class BasicAdmin(admin.ModelAdmin):
     pass
