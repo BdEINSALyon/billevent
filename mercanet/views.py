@@ -7,8 +7,9 @@ import urllib.request
 # Create your views here.
 from math import floor
 from math import floor
+from django.http import HttpResponse
 class MercanetViewSet:
-    def pay(amount):
+    def pay(request, amount):
         id = int(floor(time()))
         interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
         keyVersion = os.environ['MERCANET_KEY_VERSION']
@@ -23,8 +24,16 @@ class MercanetViewSet:
 
         r = urllib.request.urlopen(urlMercanet, data=data)  #on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON
-        redirectionData = reponseMercanet["redirectionData"]  #on extrait les données à renvoyer à Mercanet
-        redirectionUrl = reponseMercanet["redirectionUrl"]
+        redirectionData = reponseMercanet["redirectionData"]  #on extrait les données à insérer dans la page pour le client
+        redirectionUrl = reponseMercanet["redirectionUrl"]      #url que le client va appeler
         if(reponseMercanet["redirectionStatusCode"] == 00):   #si la communication s'est bien passée
-            finalData = json.dump({"redirectionVersion:" interfaceVersion, "redirectionData": redirectionData})
-            rr = urllib.request.urlopen(redirectionUrl, data=finalData)
+            template = loader.get_template('mercanet/template.html')    #utilise ma petite page HTML à jolifier comme réponse HTTP
+            context = { # charge les données dans la page qu'on renvoie au client, qui le redirigera vers le paiement MercaNET
+                "redirectionUrl": redirectionUrl,
+                "redirectionData" : redirectionData,
+                "interfaceVersion" : interfaceVersion
+            }
+            return HttpResponse(template.render(context, request))
+
+
+            reponseAutoFinale = json.loads(rr.read.decode(rr.info().get_param('charset') or 'utf-8'))
