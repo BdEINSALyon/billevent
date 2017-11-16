@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.models import Event, Order, Option, Product, Billet, PricingRule, Question
+from api.serializers import BilletSerializer
 from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
@@ -69,3 +70,9 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
             return Option.objects.all()
 
         return Option.objects.filter(products=produit_id)
+
+
+class BilletViewSet(viewsets.ModelViewSet):
+    serializer_class = BilletSerializer
+    queryset = Billet.objects.all()
+

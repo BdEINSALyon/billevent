@@ -81,3 +81,12 @@ class OrderSerializer(serializers.ModelSerializer):
         model = models.Order
         fields = ('id', 'client', 'event', 'billets')
         depth = 10
+
+
+class BilletSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    options = OptionSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = models.Billet
+        fields = ('id', 'product', 'options')
