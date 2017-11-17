@@ -114,5 +114,21 @@ class BilletViewSet(viewsets.ModelViewSet):
             return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("Plus de billets disponibles !", status=status.HTTP_200_OK)
 
+    # def update(self, request, *args, **kwargs):
+    #     """
+    #     Pour mettre à jour un billet, voir aussi la fonction create. Attention, met seulement à jour les options !
+    #
+    #     :param request:
+    #     :param args:
+    #     :param kwargs:
+    #     :return:
+    #     """
+    #     billet = BilletSerializer(data=request.data)
+    #     if billet.is_valid():
+    #         ancien_billet = Billet.objects.get(billet.data.id)
+    #         for option in billet.data['options']:
+    #
+    #         #if Option.objects.get(id=billet.data.)
+    #             #ancien_billet.options =
 
 
