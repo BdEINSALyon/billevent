@@ -143,7 +143,7 @@ class Billet(models.Model):
     options = models.ManyToManyField(Option, related_name='billets')
 
     def __str__(self):
-        return str(self.id)
+        return str("Billet n°" + str(self.id))
 
 
 class PricingRule(models.Model):

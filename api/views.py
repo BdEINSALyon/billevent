@@ -8,6 +8,7 @@ from rest_framework.decorators import detail_route, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import datetime
 
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, PricingRule, Question, Participant, Categorie
@@ -19,7 +20,8 @@ from .serializers import UserSerializer, GroupSerializer, EventSerializer, Order
 class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
-    #permission_classes = permissions.IsAuthenticatedAndReadOnly
+
+    # permission_classes = permissions.IsAuthenticatedAndReadOnly
 
     @detail_route(methods=['get'])
     def order(self, request, pk=None):
@@ -34,9 +36,10 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(OrderSerializer(order).data)
 
     @detail_route(methods=['get'])
-    def categorie(self,request,pk=None):
+    def categorie(self, request, pk=None):
         event = self.get_object()
-        return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(),many=True).data)
+        return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
+
 
 """
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -54,7 +57,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = ProductSerializer
-    #permission_classes = permissions.IsAuthenticatedAndReadOnly
+
+    # permission_classes = permissions.IsAuthenticatedAndReadOnly
 
     def get_queryset(self):
         event_id = self.request.GET.get("event")
@@ -88,16 +92,27 @@ class BilletViewSet(viewsets.ModelViewSet):
     serializer_class = BilletSerializer
     queryset = Billet.objects.all()
 
-    def retrieve(self, request, pk=None,*args, **kwargs):
+    def retrieve(self, request, pk=None, *args, **kwargs):
         return Response(BilletSerializer(self.queryset.filter(id=pk).get()).data)
 
-    # def create(self, request, *args, **kwargs):
-    #     billet = BilletSerializer(data=request.data)
-    #     if billet.is_valid():
-    #         billet.save()
-    #         if Product.objects.get(id=billet.data.product.data.id).can_buy_one_more:
-    #
-    #             return Response(billet.data, status=status.HTTP_201_CREATED)
-    #     return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+    def create(self, request, *args, **kwargs):
+        """
+        Pour créer un nouveau billet, il faut envoyer une requête POST avec l'id du produit dans le champ product et la liste des ids d'options dans le champ options
+
+        """
+        if Product.objects.get(id=request.data['product']).can_buy_one_more:
+            #On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
+            billet = BilletSerializer(data=request.data)
+            if billet.is_valid():   #Si le billet est valide
+
+                new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
+                                    options=Option.objects.filter(id=billet.data['options'][0]))
+
+                new_billet.save()
+
+                return Response(billet.data, status=status.HTTP_201_CREATED)
+            return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("Plus de billets disponibles !", status=status.HTTP_200_OK)
+
 
 

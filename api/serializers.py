@@ -1,7 +1,9 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from api import models
+from api.models import Billet
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -84,12 +86,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class BilletSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    options = OptionSerializer(read_only=True, many=True)
+    #product = PrimaryKeyRelatedField(read_only=True)
+   # options = PrimaryKeyRelatedField(many=True,read_only=True,required=False)
 
     class Meta:
         model = models.Billet
         fields = ('id', 'product', 'options')
+        depth = 0
+
+    def create(self, validated_data):
+        return Billet(**validated_data)
 
 
 class CategorieSerializer(serializers.ModelSerializer):
