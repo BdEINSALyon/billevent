@@ -183,5 +183,4 @@ venv.bak/
 
 node_modules
 static/client.js
-db.sqlite3.demo
 .idea
