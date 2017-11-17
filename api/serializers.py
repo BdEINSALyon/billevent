@@ -41,7 +41,7 @@ class OptionSerializer(serializers.ModelSerializer):
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules',
-                  'questions', 'event','can_buy_one_more','categorie')
+                  'questions', 'event','can_buy_one_more')
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -54,7 +54,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules', 'options',
-                  'questions', 'event', 'can_buy_one_more','categorie')
+                  'questions', 'event', 'can_buy_one_more', 'categorie')
 
 
 class OrganizerSerializer(serializers.ModelSerializer):
@@ -99,6 +99,8 @@ class BilletSerializer(serializers.ModelSerializer):
 
 
 class CategorieSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True)
+
     class Meta:
         model = models.Categorie
-        fields = ('name', 'desc')
+        fields = ('name', 'desc', 'products')

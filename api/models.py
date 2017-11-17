@@ -70,7 +70,6 @@ class Pricing(models.Model):
         abstract = True
 
     name = models.CharField(max_length=255)
-    categorie = models.ForeignKey(Categorie, default=1, verbose_name=_('Catégorie'))
     seats = models.IntegerField(default=1)
     price_ht = models.DecimalField(verbose_name=_('Prix HT'), decimal_places=2, max_digits=11)
     price_ttc = models.DecimalField(verbose_name=_('Prix TTC'), decimal_places=2, max_digits=11)
@@ -104,12 +103,17 @@ class Pricing(models.Model):
                 return False
 
     def __str__(self):
-        return self.name+" - "+self.categorie.name
+        return self.name
 
 
 class Product(Pricing):
+    categorie = models.ForeignKey(Categorie, default=1, verbose_name=_('Catégorie'), related_name='products')
+
     class Meta:
         verbose_name = _('Tarif des produit')
+
+    def __str__(self):
+        return self.name+" - "+self.categorie.name
 
 
 class Option(Pricing):
