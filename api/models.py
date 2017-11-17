@@ -104,7 +104,7 @@ class Pricing(models.Model):
                 return False
 
     def __str__(self):
-        return self.name
+        return self.name+" - "+self.categorie.name
 
 
 class Product(Pricing):
