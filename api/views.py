@@ -16,6 +16,8 @@ from api.serializers import BilletSerializer, CategorieSerializer
 from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
+plus_disponible_view = Response("Ce que vous demandez n'est plus disponible",status=status.HTTP_200_OK)
+invalid_request_view = Response("Requête invalide, les paramètres spécifiés dans le POST sont non conformes",status=status.HTTP_400_BAD_REQUEST)
 
 class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Event.objects.all()
@@ -114,21 +116,25 @@ class BilletViewSet(viewsets.ModelViewSet):
             return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("Plus de billets disponibles !", status=status.HTTP_200_OK)
 
-    # def update(self, request, *args, **kwargs):
-    #     """
-    #     Pour mettre à jour un billet, voir aussi la fonction create. Attention, met seulement à jour les options !
-    #
-    #     :param request:
-    #     :param args:
-    #     :param kwargs:
-    #     :return:
-    #     """
-    #     billet = BilletSerializer(data=request.data)
-    #     if billet.is_valid():
-    #         ancien_billet = Billet.objects.get(billet.data.id)
-    #         for option in billet.data['options']:
-    #
-    #         #if Option.objects.get(id=billet.data.)
-    #             #ancien_billet.options =
+    def update(self, request, *args, **kwargs):
+        """
+        Pour mettre à jour un billet, voir aussi la fonction create. Attention, met seulement à jour les options !
+
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        billet = BilletSerializer(data=request.data)
+        if billet.is_valid():
+            ancien_billet = Billet.objects.get(billet.data.id)
+            for option in billet.data['options']:
+                if Option.objects.get(option.id):
+                    return plus_disponible_view
+            if Option.objects.get(id=billet.data):
+                ancien_billet.options = billet.data['options']
+                ancien_billet.save()
+                return BilletSerializer(ancien_billet)
+        return invalid_request_view
 
 
