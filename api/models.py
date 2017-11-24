@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.db import models
 
 from django.utils.translation import ugettext_lazy as _
-
+from django.core.exceptions import ValidationError
 
 class Organizer(models.Model):
     class Meta:
@@ -143,6 +143,25 @@ class Invitation(models.Model):
 class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
+
+    def clean(self):
+        #On vérifie d'abord que le modèle est clean
+        super().clean()
+        #On vérifie si le billet existe déja dans la BDD
+        if self.id in Billet.objects.all().id:
+            #@TODO Faire différence billet actuel - ancien billet
+            pass
+        #Ensuite, on vérifie qu'il reste encore assez de place
+        else:
+            #Si il reste encore des produits dispos
+            if Product.objects.get(id=self.product.id).how_many_left > 0:
+                #On regarde pour chaque Option si il y en a assez de dispo
+                for option in self.options:
+                    if self.options.count(option) > Option.objects.get(id=option.id).how_many_left:
+                        raise ValidationError("Il n'y a plus assez d'options: " + str(Option.objects.get(id=option.id).name))
+            else:
+                raise ValidationError("Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
+
 
     def __str__(self):
         return str("Billet n°" + str(self.id))
