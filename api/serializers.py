@@ -41,7 +41,7 @@ class OptionSerializer(serializers.ModelSerializer):
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules','seats'
-                  'questions', 'event','can_buy_one_more')
+                  'questions', 'event','how_many_left')
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -54,7 +54,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
                   'rules', 'options','seats',
-                  'questions', 'event', 'can_buy_one_more', 'categorie')
+                  'questions', 'event', 'how_many_left', 'categorie')
 
 
 class OrganizerSerializer(serializers.ModelSerializer):
