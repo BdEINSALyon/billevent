@@ -81,26 +81,24 @@ class Pricing(models.Model):
         return '{} - {}€'.format(self.name, self.price_ttc)
 
     @property
-    def can_buy_one_more(self) -> bool:
+    def how_many_left(self) -> int:
         """
 
-        :return: Si l'utilisateur peut en acheter un de plus
+        :return: Le nombre de produit restant ou -1 si il en reste une infinité/quantitée indé
         """
         try:
             billets_max = type(self).objects.get(id=self.id).rules.get(type=PricingRule.TYPE_T).value
-            nombre_billet = Billet.objects.filter(product=self.id).count()
-
-        except type(self).DoesNotExist:
-            return False
+            nombre_billet = 0
+            if self is Product:
+                nombre_billet = Billet.objects.filter(product=self.id).count()
+            if self is Option:
+                nombre_billet = Billet.objects.filter(product=self.id).count()
         except PricingRule.DoesNotExist:
-            return True
+            return -1
         except Billet.DoesNotExist:
-            return True
+            return -1
         else:
-            if billets_max - nombre_billet > 0:
-                return True
-            else:
-                return False
+            return billets_max-nombre_billet
 
     def __str__(self):
         return self.name
