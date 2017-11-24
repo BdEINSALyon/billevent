@@ -40,7 +40,7 @@ class OptionSerializer(serializers.ModelSerializer):
         model = models.Option
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
-                  'rules',
+                  'rules', 'seats',
                   'questions', 'event','can_buy_one_more')
 
 
@@ -53,7 +53,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = models.Product
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
-                  'rules', 'options',
+                  'rules', 'options', 'seats',
                   'questions', 'event', 'can_buy_one_more', 'categorie')
 
 
