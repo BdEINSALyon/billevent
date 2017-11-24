@@ -25,6 +25,6 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^swagger', schema_view),
     url(r'^ticketgenerator/', include('ticketgenerator.urls')),
-    url(r'^', include('frontend.urls')),
-    url(r'^pay/', include('mercanet.urls'))
+    url(r'^pay/', include('mercanet.urls')),
+    url(r'^', include('frontend.urls')) #il faut que ce soit la dernière ligne !!!
 ]
