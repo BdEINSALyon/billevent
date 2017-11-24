@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.db import models
 
 from django.utils.translation import ugettext_lazy as _
@@ -225,8 +225,16 @@ class PaymentMethod(models.Model):
         return self.paymentProtocol
 
 
+class Client(models.Model):
+    first_name = models.CharField(max_length=255, blank=True, null=True)
+    last_name = models.CharField(max_length=255, blank=True, null=True)
+    email = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    user = models.OneToOneField(User, related_name='client')
+
+
 class Order(models.Model):
-    client = models.ForeignKey(Participant, blank=True, null=True)
+    client = models.ForeignKey(Client, blank=True, null=True)
     billets = models.ManyToManyField(Billet, blank=True)
     event = models.ForeignKey(Event)
 
