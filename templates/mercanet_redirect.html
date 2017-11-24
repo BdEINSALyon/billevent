@@ -1,0 +1,10 @@
+<html>
+<body>
+<form name="redirectForm" method="POST" action="{{ redirectionUrl }}"\>
+<input type="hidden" name="redirectionVersion" value="{{  interfaceVersion }}"\>
+    <input type="hidden" name="redirectionData" value="{{ redirectionData }}"\>
+    <noscript><input type="submit" name="Go" value="Click to continue"/></noscript>
+</form>
+<script type="text/javascript"> document.redirectForm.submit(); </script>
+</body>
+</html>

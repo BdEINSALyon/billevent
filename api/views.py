@@ -114,10 +114,13 @@ class BilletViewSet(viewsets.ModelViewSet):
         Pour créer un nouveau billet, il faut envoyer une requête POST avec l'id du produit dans le champ product et la liste des ids d'options dans le champ options
 
         """
-        if Product.objects.get(id=request.data['product']).how_many_left:
+        if Product.objects.get(id=request.data['product']).how_many_left > 0:
             #On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
             billet = BilletSerializer(data=request.data)
             if billet.is_valid():   #Si le billet est valide
+
+
+
 
                 new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
                                     options=Option.objects.filter(id=billet.data['options'][0]))
