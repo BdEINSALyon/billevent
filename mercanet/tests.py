@@ -1,5 +1,5 @@
 from django.test import TestCase
-import sealTransaction
+from mercanet import sealTransaction
 #Pour les tests, il faut penser à ajouter aux options de lancement des test unitaires la variable d'environnement DJANGO_SETTINGS_MODULE à la valeur billetterie.settings
 #
 # Create your tests here.
