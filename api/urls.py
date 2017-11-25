@@ -5,18 +5,16 @@ from . import views
 
 router = routers.SimpleRouter()
 router.register(r'events', views.EventsViewSet)
-router.register(r'products',views.ProductViewSet, 'products')
-router.register(r'options',views.OptionViewSet, 'options')
-router.register(r'billets',views.BilletViewSet,'billet')
+router.register(r'products', views.ProductViewSet, 'products')
+router.register(r'options', views.OptionViewSet, 'options')
+router.register(r'billets', views.BilletViewSet, 'billet')
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
-    url(r'^token-auth/', obtain_jwt_token),
-    url(r'^authenticate', obtain_jwt_token),
-    url(r'^token-refresh/', refresh_jwt_token),
+    url(r'^authenticate/invitation$', views.InvitationAuthentication.as_view()),
+    url(r'^authenticate$', obtain_jwt_token),
+    url(r'^authenticate/refresh$', refresh_jwt_token),
     url(r'^', include(router.urls)),
     url(r'^', include('rest_framework.urls', namespace='rest_framework')),
 
-
 ]
-
