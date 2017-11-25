@@ -2,6 +2,9 @@ from datetime import datetime
 
 from django.contrib.auth.models import Group, User
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch.dispatcher import receiver
+from django.utils.crypto import get_random_string
 
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -130,6 +133,10 @@ class Option(Pricing):
     target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
 
 
+def generate_token():
+    return get_random_string(32)
+
+
 class Invitation(models.Model):
     seats = models.IntegerField(default=1)
     email = models.EmailField()
@@ -138,15 +145,17 @@ class Invitation(models.Model):
     link_sent = models.BooleanField(blank=True)
     reason = models.TextField(blank=True)
     event = models.ForeignKey(Event, related_name='invitations')
-    products = models.ManyToManyField(Product, blank=True)
+    client = models.ForeignKey('Client', related_name='invitations', null=True, blank=True)
+    token = models.CharField(max_length=32, default=generate_token)
 
-    def is_allowed_to_buy(self, product):
-        if len(self.products) == 0:
-            return True
-        elif self.products.filter(id=product.id).count() > 0:
-            return True
-        else:
-            return False
+
+@receiver(pre_save, sender=Invitation)
+def before_save_invitation_map_client(sender, instance, raw, **kwargs):
+    if instance.client_id is None:
+        instance.client, created = Client.objects.get_or_create(email=instance.email, defaults={
+            'first_name': instance.first_name,
+            'last_name': instance.last_name
+        })
 
 
 class Billet(models.Model):
@@ -266,11 +275,30 @@ class PaymentMethod(models.Model):
 
 
 class Client(models.Model):
-    first_name = models.CharField(max_length=255, blank=True, null=True)
-    last_name = models.CharField(max_length=255, blank=True, null=True)
-    email = models.CharField(max_length=255, blank=True, null=True)
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    email = models.CharField(max_length=255)
     phone = models.CharField(max_length=255, blank=True, null=True)
-    user = models.OneToOneField(User, related_name='client')
+    user = models.OneToOneField(User, related_name='client', blank=True)
+
+    def __str__(self):
+        name = "#" + str(self.id) + " "
+        name += self.last_name + " "
+        name += self.first_name + " ("
+        name += self.email + ")"
+        return name
+
+
+@receiver(pre_save, sender=Client)
+def before_save_client_map_user(instance, **kwargs):
+    if instance.user_id is None:
+        user = None
+        try:
+            user = User.objects.get(email=instance.email)
+        except User.DoesNotExist:
+            user = User.objects.create_user(instance.email, instance.email, get_random_string(length=32))
+            user.save()
+        instance.user = user
 
 
 class Order(models.Model):
