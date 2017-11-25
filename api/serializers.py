@@ -84,6 +84,23 @@ class OrderSerializer(serializers.ModelSerializer):
         depth = 10
 
 
+class ClientSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Client
+        fields = ('id', 'first_name', 'last_name', 'email', 'phone')
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+    event = EventSerializer(read_only=True)
+    client = ClientSerializer(read_only=True)
+
+    class Meta:
+        model = models.Invitation
+        fields = ('id', 'client', 'event', 'token')
+        depth = 3
+
+
 class BilletSerializer(serializers.ModelSerializer):
     product = PrimaryKeyRelatedField(many=False, queryset=Product.objects.all())
     options = PrimaryKeyRelatedField(many=True, required=False, queryset=Option.objects.all())

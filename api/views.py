@@ -12,7 +12,7 @@ from rest_framework_jwt.settings import api_settings
 
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation
-from api.serializers import BilletSerializer, CategorieSerializer
+from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
@@ -183,12 +183,12 @@ class InvitationAuthentication(APIView):
         except Invitation.DoesNotExist:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
-        event = EventSerializer(invitation.event)
+        invitation_serializer = InvitationSerializer(invitation)
 
         payload = jwt_payload_handler(invitation.client.user)
         jwt_token = jwt_encode_handler(payload)
 
         return Response({
             'jwt': jwt_token,
-            'event': event.data
+            'invitation': invitation_serializer.data
         }, status=status.HTTP_202_ACCEPTED)
