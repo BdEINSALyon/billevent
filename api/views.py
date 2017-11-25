@@ -9,6 +9,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.exceptions import ValidationError
 import datetime
 
 from api import permissions
@@ -91,7 +92,7 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = OptionSerializer
-    permission_classes = permissions.IsAuthenticatedAndReadOnly
+    permission_classes = (permissions.IsAuthenticatedAndReadOnly,)
 
     def get_queryset(self):
         produit_id = self.request.GET.get("produit")
@@ -114,21 +115,26 @@ class BilletViewSet(viewsets.ModelViewSet):
         Pour créer un nouveau billet, il faut envoyer une requête POST avec l'id du produit dans le champ product et la liste des ids d'options dans le champ options
 
         """
-        if Product.objects.get(id=request.data['product']).how_many_left > 0:
-            #On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
-            billet = BilletSerializer(data=request.data)
-            if billet.is_valid():   #Si le billet est valide
+        try:
+            if Product.objects.get(id=request.data['product']).how_many_left > 0 or Product.objects.get(id=request.data['product']).how_many_left ==-1 :
+                #On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
+                billet = BilletSerializer(data=request.data)
+                if billet.is_valid():   #Si le billet est valide
+
+                    billet.validated_data['id']= Billet.objects.count()+1
+
+                    new_billet = billet.create(billet.validated_data)
+                    #new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
+                    #                    options=Option.objects.filter(id=billet.data['options'][0]))
+
+                    new_billet.save()
 
 
 
-
-                new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
-                                    options=Option.objects.filter(id=billet.data['options'][0]))
-
-                new_billet.save()
-
-                return Response(billet.data, status=status.HTTP_201_CREATED)
-            return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(BilletSerializer(new_billet).data, status=status.HTTP_201_CREATED)
+                return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response(e.message)
         return Response("Plus de billets disponibles !", status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
@@ -142,16 +148,16 @@ class BilletViewSet(viewsets.ModelViewSet):
         """
         billet = BilletSerializer(data=request.data)
         if billet.is_valid():
-
-            ancien_billet = Billet.objects.get(billet.data.id)
-
-            for option in billet.data['options']:
-                if Option.objects.get(option.id):
-                    return plus_disponible_view
-            if Option.objects.get(id=billet.data):
-                ancien_billet.options = billet.data['options']
+            try:
+                ancien_billet = Billet.objects.get(id=kwargs.get("pk"))
+                test = billet.validated_data
+                #billet.validated_data['product']=ancien_billet.product.id
+                #ancien_billet.options = billet.data['options']
+                test = billet.update(ancien_billet,billet.validated_data)
                 ancien_billet.save()
-                return BilletSerializer(ancien_billet)
+                return Response(BilletSerializer(ancien_billet).data,status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response(e.message)
         return invalid_request_view
 
 

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.relations import PrimaryKeyRelatedField
 
 from api import models
-from api.models import Billet
+from api.models import Billet, Product, Option
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -40,8 +40,8 @@ class OptionSerializer(serializers.ModelSerializer):
         model = models.Option
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
-                  'rules','seats'
-                  'questions', 'event', 'how_many_left')
+                  'rules','seats',
+                  'questions', 'event','how_many_left')
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -86,16 +86,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class BilletSerializer(serializers.ModelSerializer):
-    #product = PrimaryKeyRelatedField(read_only=True)
-   # options = PrimaryKeyRelatedField(many=True,read_only=True,required=False)
+    product = PrimaryKeyRelatedField(many=False,queryset=Product.objects.all())
+    options = PrimaryKeyRelatedField(many=True,required=False,queryset= Option.objects.all())
 
     class Meta:
         model = models.Billet
         fields = ('id', 'product', 'options')
-        depth = 0
+        depth = 1
 
-    def create(self, validated_data):
-        return Billet(**validated_data)
+
 
 
 class CategorieSerializer(serializers.ModelSerializer):

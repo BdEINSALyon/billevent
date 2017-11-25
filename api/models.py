@@ -89,14 +89,15 @@ class Pricing(models.Model):
         try:
             billets_max = type(self).objects.get(id=self.id).rules.get(type=PricingRule.TYPE_T).value
             nombre_billet = 0
-            if self is Product:
+
+            if type(self) is Product:
                 nombre_billet = Billet.objects.filter(product=self.id).count()
-            if self is Option:
-                nombre_billet = Billet.objects.filter(product=self.id).count()
+            if type(self) is Option:
+                nombre_billet = Billet.objects.filter(options=self.id).count()
         except PricingRule.DoesNotExist:
-            return -1
+            return 9999
         except Billet.DoesNotExist:
-            return -1
+            return 9999
         else:
             return billets_max-nombre_billet
 
@@ -119,7 +120,6 @@ class Option(Pricing):
         verbose_name = _('Tarif des option')
 
     products = models.ManyToManyField(Product, related_name='options')
-
 
 class Invitation(models.Model):
     seats = models.IntegerField(default=1)
@@ -144,24 +144,35 @@ class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
 
-    def clean(self):
+
+    def save(self,force_insert=False, force_update=False, using=None,
+             update_fields=None):
         #On vérifie d'abord que le modèle est clean
-        super().clean()
+
+
         #On vérifie si le billet existe déja dans la BDD
-        if self.id in Billet.objects.all().id:
-            #@TODO Faire différence billet actuel - ancien billet
+        if self in Billet.objects.all().values():
+            #Pour chaque option du billet
+            for option in self.options.all().values():
+                if Option.objects.get(id=option.id).how_many_left > 0:
+                    print("Billet existant !")
+                #@TODO Faire différence billet actuel - ancien billet
             pass
         #Ensuite, on vérifie qu'il reste encore assez de place
         else:
+
             #Si il reste encore des produits dispos
             if Product.objects.get(id=self.product.id).how_many_left > 0:
                 #On regarde pour chaque Option si il y en a assez de dispo
-                for option in self.options:
-                    if self.options.count(option) > Option.objects.get(id=option.id).how_many_left:
-                        raise ValidationError("Il n'y a plus assez d'options: " + str(Option.objects.get(id=option.id).name))
+                for option in self.options.all().only("id").values("id"):
+                    if Option.objects.get(id=option['id']).how_many_left < 1:
+                        raise ValidationError("Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
             else:
                 raise ValidationError("Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
 
+        #Une fois notre vérification effectuée, on enregistre l'objet
+        super().save(force_insert=force_insert, force_update=force_update, using=using,
+             update_fields=update_fields)
 
     def __str__(self):
         return str("Billet n°" + str(self.id))
