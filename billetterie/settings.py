@@ -39,8 +39,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = (
     'billetterie.bde-insa-lyon.fr',
     'localhost:4200',
-    '127.0.0.1:4200'
-    '127.0.0.1',
+    '127.0.0.1:4200',
 )
 
 # Application definition
@@ -104,7 +103,8 @@ REST_FRAMEWORK = {
 
 JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=30000000),
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=300),
+    'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(hours=6)
 }
 
 # Database

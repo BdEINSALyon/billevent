@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.core.exceptions import ValidationError
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -11,8 +13,8 @@ from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation
-from api.serializers import BilletSerializer, CategorieSerializer
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client
+from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
@@ -25,7 +27,8 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
 
-    # permission_classes = permissions.IsAuthenticatedAndReadOnly
+    def get_queryset(self):
+        return Event.for_user(self.request.user)
 
     @detail_route(methods=['get'])
     def order(self, request, pk=None):
@@ -76,12 +79,13 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     # permission_classes = permissions.IsAuthenticatedAndReadOnly
 
     def get_queryset(self):
-        event_id = self.request.GET.get("event")
-        print(event_id)
-        if event_id is None:
-            return Product.objects.all()
+        events = Event.for_user(self.request.user)
 
-        return Product.objects.filter(event=event_id)
+        event_id = self.request.GET.get("event")
+        if event_id is None:
+            return Product.objects.filter(event=events)
+
+        return Product.objects.filter(event=events.get(event_id))
 
 
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -95,11 +99,13 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticatedAndReadOnly,)
 
     def get_queryset(self):
-        produit_id = self.request.GET.get("produit")
-        if produit_id is None:
-            return Option.objects.all()
+        events = Event.for_user(self.request.user)
 
-        return Option.objects.filter(products=produit_id)
+        event_id = self.request.GET.get("event")
+        if event_id is None:
+            return Option.objects.filter(event=events)
+
+        return Option.objects.filter(event=events.get(event_id))
 
 
 class BilletViewSet(viewsets.ModelViewSet):
@@ -183,9 +189,12 @@ class InvitationAuthentication(APIView):
         except Invitation.DoesNotExist:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
+        invitation_serializer = InvitationSerializer(invitation)
+
         payload = jwt_payload_handler(invitation.client.user)
         jwt_token = jwt_encode_handler(payload)
 
         return Response({
-            'jwt': jwt_token
+            'jwt': jwt_token,
+            'invitation': invitation_serializer.data
         }, status=status.HTTP_202_ACCEPTED)
