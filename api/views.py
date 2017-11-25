@@ -85,7 +85,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         if event_id is None:
             return Product.objects.filter(event=events)
 
-        return Product.objects.filter(event=events.get(event_id))
+        return Product.objects.filter(event=events.filter(id=event_id))
 
 
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):

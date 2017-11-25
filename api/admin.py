@@ -13,6 +13,7 @@ from . import models
                 models.Response,
                 models.Categorie,
                 models.Client,
+                models.Order,
                 models.Participant)
 class BasicAdmin(admin.ModelAdmin):
     pass
