@@ -183,9 +183,12 @@ class InvitationAuthentication(APIView):
         except Invitation.DoesNotExist:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
+        event = EventSerializer(invitation.event)
+
         payload = jwt_payload_handler(invitation.client.user)
         jwt_token = jwt_encode_handler(payload)
 
         return Response({
-            'jwt': jwt_token
+            'jwt': jwt_token,
+            'event': event.data
         }, status=status.HTTP_202_ACCEPTED)
