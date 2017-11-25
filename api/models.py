@@ -199,7 +199,8 @@ class BilletOption(models.Model):
     """
     Permet de relier une option à un billet
     """
-    billet = models.ForeignKey('Billet')
+    billet = models.ForeignKey('Billet', null=True, blank=True, related_name='billet_options')
+    order = models.ForeignKey('Order', null=True, blank=True, related_name='billet_options')
     option = models.ForeignKey(Option)
     amount = models.IntegerField(default=1)
     participant = models.ForeignKey('Participant', null=True, blank=True, related_name='options_by_billet')
