@@ -11,7 +11,15 @@ def sealHash(montant_a_payer, interface_version, id_boutique, return_url, transa
     data = bytearray(DataForSeal.encode("UTF-8"))
     seal = hmac.new(cle_encodee, data, hashlib.sha256).hexdigest()
     return seal
+def sealFromList(liste, cle_secrete):
+    dataForSeal = ""
+    for valeur in liste:
+        dataForSeal += str(valeur) #rajoute chaque valeur à une string
+    data = bytearray(dataForSeal.encode("UTF-8")) #met en forme la grande string
+    cle_encodee = bytearray(cle_secrete.encode("UTF-8")) #met en forme la clé secrete
 
+    seal = hmac.new(cle_encodee, data, hashlib.sha256).hexdigest()
+    return seal
 # cle_secrete : clé identifiant le BdE auprès de Mercanet, à recevoir depuis une variable d'environnement (ne pas stocker sur GitHub !)
 #montant_a_payer :  salope, du biff, salope, du biff
 #interface_version :  #version du connecteur JSON fait par Mercanet
