@@ -30,10 +30,13 @@ class Organizer(models.Model):
 
 
 class Event(models.Model):
+    VISIBILITY = (('closed', 'Fermée'), ('hidden', 'Cachée'), ('invite', 'Par invitation'), ('public', 'Public'))
+
     class Meta:
         verbose_name = _('Evènement')
 
     name = models.CharField(verbose_name=_("Nom de l'évènement"), max_length=255)
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default='closed', verbose_name=_('Visibilitée'))
     description = models.TextField(verbose_name=_("Description"))
     ticket_background = models.ImageField(verbose_name=_("Fond d'image tickets"), blank=True)
     sales_opening = models.DateTimeField(default=datetime.now, verbose_name=_("Ouverture des ventes"))
@@ -63,6 +66,15 @@ class Event(models.Model):
     @property
     def products(self):
         return self.product_set
+
+    @staticmethod
+    def for_user(user):
+        try:
+            client = user.client
+            return Event.objects.filter(start_time__gte=datetime.now(), visibility='public') | \
+                   Event.objects.filter(invitations__client=client)
+        except Client.DoesNotExist:
+            return Event.objects.filter(start_time__gte=datetime.now(), visibility='public')
 
 
 class Categorie(models.Model):
