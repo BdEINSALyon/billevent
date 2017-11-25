@@ -39,7 +39,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = (
     'billetterie.bde-insa-lyon.fr',
     'localhost:4200',
-    '127.0.0.1:4200',
+    '127.0.0.1:4200'
+    '127.0.0.1',
 )
 
 # Application definition
@@ -103,7 +104,7 @@ REST_FRAMEWORK = {
 
 JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=300),
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=30000000),
 }
 
 # Database
@@ -166,3 +167,4 @@ os.environ['NORMAL_RETURN_URL'] = 'http://jean.netlib.re'
 #os.environ['MERCANET_URL'] = "https://payment-webinit.simu.mercanet.bnpparibas.net/paymentInit"
 os.environ['MERCANET_URL'] = "https://payment-webinit-mercanet.test.sips-atos.com/rs-services/v2/paymentInit" #à garder, MercaNET se sont trompés dans leur doc
 os.environ['MERCANET_SECRET_KEY'] = "S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o"
+os.environ['MERCANET_REPONSE_AUTO_URL'] = "http://mercanet.jeanribes.ultrahook.com/pay/auto/mercanet-sent"
