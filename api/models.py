@@ -6,6 +6,13 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 
+TARGETS = (
+    ('Order', _('Globalement sur la commande')),
+    ('Billet', _('Pour chaque billet')),
+    ('Participant', _('Pour chaque participant')),
+)
+
+
 class Organizer(models.Model):
     class Meta:
         verbose_name = _('Organisateur')
@@ -58,7 +65,7 @@ class Event(models.Model):
 class Categorie(models.Model):
     name = models.CharField(max_length=50)
     desc = models.CharField(max_length=255, blank=True)
-    event = models.ForeignKey(Event,verbose_name=_('Evènements'))
+    event = models.ForeignKey(Event, verbose_name=_('Evènements'))
 
     def __str__(self):
         return self.name
@@ -99,7 +106,7 @@ class Pricing(models.Model):
         except Billet.DoesNotExist:
             return 9999
         else:
-            return billets_max-nombre_billet
+            return billets_max - nombre_billet
 
     def __str__(self):
         return self.name
@@ -112,7 +119,7 @@ class Product(Pricing):
         verbose_name = _('Tarif des produit')
 
     def __str__(self):
-        return self.name+" - "+self.categorie.name
+        return self.name + " - " + self.categorie.name
 
 
 class Option(Pricing):
@@ -120,6 +127,8 @@ class Option(Pricing):
         verbose_name = _('Tarif des option')
 
     products = models.ManyToManyField(Product, related_name='options')
+    target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
+
 
 class Invitation(models.Model):
     seats = models.IntegerField(default=1)
@@ -144,35 +153,36 @@ class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
 
-
-    def save(self,force_insert=False, force_update=False, using=None,
+    def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        #On vérifie d'abord que le modèle est clean
+        # On vérifie d'abord que le modèle est clean
 
 
-        #On vérifie si le billet existe déja dans la BDD
+        # On vérifie si le billet existe déja dans la BDD
         if self in Billet.objects.all().values():
-            #Pour chaque option du billet
+            # Pour chaque option du billet
             for option in self.options.all().values():
                 if Option.objects.get(id=option.id).how_many_left > 0:
                     print("Billet existant !")
-                #@TODO Faire différence billet actuel - ancien billet
+                    # @TODO Faire différence billet actuel - ancien billet
             pass
-        #Ensuite, on vérifie qu'il reste encore assez de place
+        # Ensuite, on vérifie qu'il reste encore assez de place
         else:
 
-            #Si il reste encore des produits dispos
+            # Si il reste encore des produits dispos
             if Product.objects.get(id=self.product.id).how_many_left > 0:
-                #On regarde pour chaque Option si il y en a assez de dispo
+                # On regarde pour chaque Option si il y en a assez de dispo
                 for option in self.options.all().only("id").values("id"):
                     if Option.objects.get(id=option['id']).how_many_left < 1:
-                        raise ValidationError("Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
+                        raise ValidationError(
+                            "Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
             else:
-                raise ValidationError("Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
+                raise ValidationError(
+                    "Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
 
-        #Une fois notre vérification effectuée, on enregistre l'objet
+        # Une fois notre vérification effectuée, on enregistre l'objet
         super().save(force_insert=force_insert, force_update=force_update, using=using,
-             update_fields=update_fields)
+                     update_fields=update_fields)
 
     def __str__(self):
         return str("Billet n°" + str(self.id))
@@ -200,7 +210,6 @@ class PricingRule(models.Model):
     type = models.CharField(max_length=50, choices=RULES)
     description = models.TextField()
     value = models.IntegerField()
-
 
     def __str__(self):
         return str(self.type) + " " + str(self.value)
@@ -230,6 +239,7 @@ class Question(models.Model):
     help_text = models.TextField()
     question_type = models.IntegerField(verbose_name=_('type de question'))
     required = models.BooleanField(default=False)
+    target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
 
 
 class Response(models.Model):
@@ -267,5 +277,3 @@ class Order(models.Model):
     client = models.ForeignKey(Client, blank=True, null=True)
     billets = models.ManyToManyField(Billet, blank=True)
     event = models.ForeignKey(Event)
-
-
