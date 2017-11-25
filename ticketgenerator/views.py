@@ -8,10 +8,13 @@ from reportlab.lib.units import mm
 from reportlab.graphics.barcode import eanbc, qr, usps
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics import renderPDF
+from api.models import Billet
 
 def generate_ticket(request):
     uid = "12345678"
     order = "NEOMATRIX"
+    participants = Billet.objects.get(id=1).participants.all()
+    client = Billet.objects.get(id=1).clients.all()
     holder_last_name = "SKYWALKER"
     holder_first_name = "Anakin"
     buyer_last_name = "SKYWALKER"
@@ -56,11 +59,14 @@ def generate_ticket(request):
     d = Drawing(45, 45)
     d.add(qr_code)
     renderPDF.draw(d, p, 20 * mm + 0.5 * ba_width - 0.5 * qr_width, A4[1] - 20 * mm - qr_y)
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + 10) * mm, "{}".format(holder_last_name))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + 20) * mm, "{}".format(holder_first_name))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + 30) * mm, "Statut : {}".format(status))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + 40) * mm, "Prix TTC : {} €".format(price))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + 50) * mm, "Date d'émission : {}".format(issuing_date))
+    i = -20
+    for participant in participants:
+        i += 20
+        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{}".format(participant.last_name))
+        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{}".format(participant.first_name))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Statut : {}".format(status))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Prix TTC : {} €".format(price))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 50) * mm, "Date d'émission : {}".format(issuing_date))
     p.setFont("Helvetica-Bold", 25)
     p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10) * mm, "Gala INSA Lyon 2018")
     p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 15) * mm, "9 et 10 février")
@@ -70,9 +76,9 @@ def generate_ticket(request):
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 10) * mm, "Numéro : {}".format(uid))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 20) * mm, "Organisateur : BdE INSA Lyon")
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 30) * mm, "Acheteur : {} {}".format(buyer_last_name, buyer_first_name))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(order_date))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(client[0].date))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 50) * mm, "Numéro de commande : {}".format(order))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 60) * mm, "Valable pour : 1 personne")
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 60) * mm, "Valable pour : {} personnes".format(1 + int(i/20)))
     p.drawImage("ticketgenerator/bde.png", A4[0] - (20 + 22.53) * mm, A4[1] - (20 + 30) * mm, width=22.53 * mm,
                 height=30 * mm, mask=None)
     p.drawString(20 * mm, 20 * mm,
