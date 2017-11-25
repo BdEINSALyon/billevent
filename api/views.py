@@ -1,23 +1,25 @@
-from audioop import bias
-
-from django.contrib.auth.models import User, Group
-from django.http import HttpResponseNotFound
-# from httplib2 import Response
+from django.core.exceptions import ValidationError
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
-from rest_framework.decorators import detail_route, api_view
+from rest_framework.decorators import detail_route, authentication_classes, permission_classes
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import datetime
+from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, PricingRule, Question, Participant, Categorie
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation
 from api.serializers import BilletSerializer, CategorieSerializer
-from .serializers import UserSerializer, GroupSerializer, EventSerializer, OrderSerializer, OptionSerializer, \
+from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
-plus_disponible_view = Response("Ce que vous demandez n'est plus disponible",status=status.HTTP_200_OK)
-invalid_request_view = Response("Requête invalide, les paramètres spécifiés dans le POST sont non conformes",status=status.HTTP_400_BAD_REQUEST)
+plus_disponible_view = Response("Ce que vous demandez n'est plus disponible", status=status.HTTP_200_OK)
+invalid_request_view = Response("Requête invalide, les paramètres spécifiés dans le POST sont non conformes",
+                                status=status.HTTP_400_BAD_REQUEST)
+
 
 class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Event.objects.all()
@@ -51,6 +53,17 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
 """
 
 
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        event_id = self.request.GET.get("event")
+        if event_id is None:
+            raise APIException('No event id given', 400)
+
+        return Order.objects.filter(client__user=self.request.user)
+
+
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Le viewset pour les produits:
@@ -79,7 +92,7 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = OptionSerializer
-    permission_classes = permissions.IsAuthenticatedAndReadOnly
+    permission_classes = (permissions.IsAuthenticatedAndReadOnly,)
 
     def get_queryset(self):
         produit_id = self.request.GET.get("produit")
@@ -102,21 +115,25 @@ class BilletViewSet(viewsets.ModelViewSet):
         Pour créer un nouveau billet, il faut envoyer une requête POST avec l'id du produit dans le champ product et la liste des ids d'options dans le champ options
 
         """
-        if Product.objects.get(id=request.data['product']).how_many_left > 0:
-            #On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
-            billet = BilletSerializer(data=request.data)
-            if billet.is_valid():   #Si le billet est valide
+        try:
+            if Product.objects.get(id=request.data['product']).how_many_left > 0 or Product.objects.get(
+                    id=request.data['product']).how_many_left == -1:
+                # On crée un sérializer contenant les data envoyés par l'utilisateur pour checker si ce qui est envoyé est bien un billet
+                billet = BilletSerializer(data=request.data)
+                if billet.is_valid():  # Si le billet est valide
 
+                    billet.validated_data['id'] = Billet.objects.count() + 1
 
+                    new_billet = billet.create(billet.validated_data)
+                    # new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
+                    #                    options=Option.objects.filter(id=billet.data['options'][0]))
 
+                    new_billet.save()
 
-                new_billet = Billet(id=Billet.objects.count()+1, product=Product.objects.get(id=billet.data['product']),
-                                    options=Option.objects.filter(id=billet.data['options'][0]))
-
-                new_billet.save()
-
-                return Response(billet.data, status=status.HTTP_201_CREATED)
-            return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(BilletSerializer(new_billet).data, status=status.HTTP_201_CREATED)
+                return Response(billet.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response(e.message)
         return Response("Plus de billets disponibles !", status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
@@ -130,16 +147,45 @@ class BilletViewSet(viewsets.ModelViewSet):
         """
         billet = BilletSerializer(data=request.data)
         if billet.is_valid():
-
-            ancien_billet = Billet.objects.get(billet.data.id)
-
-            for option in billet.data['options']:
-                if Option.objects.get(option.id):
-                    return plus_disponible_view
-            if Option.objects.get(id=billet.data):
-                ancien_billet.options = billet.data['options']
+            try:
+                ancien_billet = Billet.objects.get(id=kwargs.get("pk"))
+                test = billet.validated_data
+                # billet.validated_data['product']=ancien_billet.product.id
+                # ancien_billet.options = billet.data['options']
+                test = billet.update(ancien_billet, billet.validated_data)
                 ancien_billet.save()
-                return BilletSerializer(ancien_billet)
+                return Response(BilletSerializer(ancien_billet).data, status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response(e.message)
         return invalid_request_view
 
 
+jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+
+jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+
+
+# noinspection PyMethodMayBeStatic
+@authentication_classes([])
+@permission_classes([])
+class InvitationAuthentication(APIView):
+    """
+    Authenticate a user based on an invitation token
+    """
+
+    def post(self, request):
+
+        if 'token' not in request.data:
+            raise APIException('No token given', 400)
+        token = request.data['token']
+        try:
+            invitation = Invitation.objects.get(token=token)
+        except Invitation.DoesNotExist:
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = jwt_payload_handler(invitation.client.user)
+        jwt_token = jwt_encode_handler(payload)
+
+        return Response({
+            'jwt': jwt_token
+        }, status=status.HTTP_202_ACCEPTED)

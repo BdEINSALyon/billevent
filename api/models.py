@@ -1,10 +1,20 @@
 from datetime import datetime
 
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch.dispatcher import receiver
+from django.utils.crypto import get_random_string
 
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+
+TARGETS = (
+    ('Order', _('Globalement sur la commande')),
+    ('Billet', _('Pour chaque billet')),
+    ('Participant', _('Pour chaque participant')),
+)
+
 
 class Organizer(models.Model):
     class Meta:
@@ -58,7 +68,7 @@ class Event(models.Model):
 class Categorie(models.Model):
     name = models.CharField(max_length=50)
     desc = models.CharField(max_length=255, blank=True)
-    event = models.ForeignKey(Event,verbose_name=_('Evènements'))
+    event = models.ForeignKey(Event, verbose_name=_('Evènements'))
 
     def __str__(self):
         return self.name
@@ -89,16 +99,17 @@ class Pricing(models.Model):
         try:
             billets_max = type(self).objects.get(id=self.id).rules.get(type=PricingRule.TYPE_T).value
             nombre_billet = 0
-            if self is Product:
+
+            if type(self) is Product:
                 nombre_billet = Billet.objects.filter(product=self.id).count()
-            if self is Option:
-                nombre_billet = Billet.objects.filter(product=self.id).count()
+            if type(self) is Option:
+                nombre_billet = Billet.objects.filter(options=self.id).count()
         except PricingRule.DoesNotExist:
-            return -1
+            return 9999
         except Billet.DoesNotExist:
-            return -1
+            return 9999
         else:
-            return billets_max-nombre_billet
+            return billets_max - nombre_billet
 
     def __str__(self):
         return self.name
@@ -111,7 +122,7 @@ class Product(Pricing):
         verbose_name = _('Tarif des produit')
 
     def __str__(self):
-        return self.name+" - "+self.categorie.name
+        return self.name + " - " + self.categorie.name
 
 
 class Option(Pricing):
@@ -119,6 +130,11 @@ class Option(Pricing):
         verbose_name = _('Tarif des option')
 
     products = models.ManyToManyField(Product, related_name='options')
+    target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
+
+
+def generate_token():
+    return get_random_string(32)
 
 
 class Invitation(models.Model):
@@ -129,39 +145,53 @@ class Invitation(models.Model):
     link_sent = models.BooleanField(blank=True)
     reason = models.TextField(blank=True)
     event = models.ForeignKey(Event, related_name='invitations')
-    products = models.ManyToManyField(Product, blank=True)
+    client = models.ForeignKey('Client', related_name='invitations', null=True, blank=True)
+    token = models.CharField(max_length=32, default=generate_token)
 
-    def is_allowed_to_buy(self, product):
-        if len(self.products) == 0:
-            return True
-        elif self.products.filter(id=product.id).count() > 0:
-            return True
-        else:
-            return False
+
+@receiver(pre_save, sender=Invitation)
+def before_save_invitation_map_client(sender, instance, raw, **kwargs):
+    if instance.client_id is None:
+        instance.client, created = Client.objects.get_or_create(email=instance.email, defaults={
+            'first_name': instance.first_name,
+            'last_name': instance.last_name
+        })
 
 
 class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, related_name='billets')
 
-    def clean(self):
-        #On vérifie d'abord que le modèle est clean
-        super().clean()
-        #On vérifie si le billet existe déja dans la BDD
-        if self.id in Billet.objects.all().id:
-            #@TODO Faire différence billet actuel - ancien billet
-            pass
-        #Ensuite, on vérifie qu'il reste encore assez de place
-        else:
-            #Si il reste encore des produits dispos
-            if Product.objects.get(id=self.product.id).how_many_left > 0:
-                #On regarde pour chaque Option si il y en a assez de dispo
-                for option in self.options:
-                    if self.options.count(option) > Option.objects.get(id=option.id).how_many_left:
-                        raise ValidationError("Il n'y a plus assez d'options: " + str(Option.objects.get(id=option.id).name))
-            else:
-                raise ValidationError("Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        # On vérifie d'abord que le modèle est clean
 
+
+        # On vérifie si le billet existe déja dans la BDD
+        if self in Billet.objects.all().values():
+            # Pour chaque option du billet
+            for option in self.options.all().values():
+                if Option.objects.get(id=option.id).how_many_left > 0:
+                    print("Billet existant !")
+                    # @TODO Faire différence billet actuel - ancien billet
+            pass
+        # Ensuite, on vérifie qu'il reste encore assez de place
+        else:
+
+            # Si il reste encore des produits dispos
+            if Product.objects.get(id=self.product.id).how_many_left > 0:
+                # On regarde pour chaque Option si il y en a assez de dispo
+                for option in self.options.all().only("id").values("id"):
+                    if Option.objects.get(id=option['id']).how_many_left < 1:
+                        raise ValidationError(
+                            "Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
+            else:
+                raise ValidationError(
+                    "Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
+
+        # Une fois notre vérification effectuée, on enregistre l'objet
+        super().save(force_insert=force_insert, force_update=force_update, using=using,
+                     update_fields=update_fields)
 
     def __str__(self):
         return str("Billet n°" + str(self.id))
@@ -189,7 +219,6 @@ class PricingRule(models.Model):
     type = models.CharField(max_length=50, choices=RULES)
     description = models.TextField()
     value = models.IntegerField()
-
 
     def __str__(self):
         return str(self.type) + " " + str(self.value)
@@ -219,6 +248,7 @@ class Question(models.Model):
     help_text = models.TextField()
     question_type = models.IntegerField(verbose_name=_('type de question'))
     required = models.BooleanField(default=False)
+    target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
 
 
 class Response(models.Model):
@@ -244,9 +274,34 @@ class PaymentMethod(models.Model):
         return self.paymentProtocol
 
 
+class Client(models.Model):
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    email = models.CharField(max_length=255)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    user = models.OneToOneField(User, related_name='client', blank=True)
+
+    def __str__(self):
+        name = "#" + str(self.id) + " "
+        name += self.last_name + " "
+        name += self.first_name + " ("
+        name += self.email + ")"
+        return name
+
+
+@receiver(pre_save, sender=Client)
+def before_save_client_map_user(instance, **kwargs):
+    if instance.user_id is None:
+        user = None
+        try:
+            user = User.objects.get(email=instance.email)
+        except User.DoesNotExist:
+            user = User.objects.create_user(instance.email, instance.email, get_random_string(length=32))
+            user.save()
+        instance.user = user
+
+
 class Order(models.Model):
-    client = models.ForeignKey(Participant, blank=True, null=True)
+    client = models.ForeignKey(Client, blank=True, null=True)
     billets = models.ManyToManyField(Billet, blank=True)
     event = models.ForeignKey(Event)
-
-
