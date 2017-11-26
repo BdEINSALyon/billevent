@@ -23,9 +23,10 @@ invalid_request_view = Response("Requête invalide, les paramètres spécifiés 
                                 status=status.HTTP_400_BAD_REQUEST)
 
 
-class EventsViewSet(viewsets.ReadOnlyModelViewSet):
+class EventsViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Event.for_user(self.request.user)
@@ -46,6 +47,29 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     def categorie(self, request, pk=None):
         event = self.get_object()
         return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
+
+    @detail_route(methods=['post'])
+    def order(self, request, pk=None):
+        event_id = pk
+        if event_id is None or not event_id.isdigit():
+            raise APIException('No event id given or the id given is not valid', 400)
+            return Response("No event id given ")
+        # Si l'utilisateur a accès a l'évenement
+        if {"id": int(event_id)} in Event.for_user(request.user).values("id"):
+
+            # on crée le serializer
+            client = Client.objects.get(user=request.user)
+
+            # Si les données envoyées sont valides
+            if Order.objects.filter(client=client).count() > 0:
+                # On dit que la commande est liée à un événement
+                order = Order(event_id=event_id, client=client)
+                order.save()
+
+                return Response(OrderSerializer(order).data)
+            return Response("Data is not valid", status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response("Vous n'avez pas accès à cet évenment ! ", status=status.HTTP_404_NOT_FOUND)
 
 
 """
