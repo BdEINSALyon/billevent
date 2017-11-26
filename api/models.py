@@ -212,6 +212,7 @@ class BilletOption(models.Model):
 class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
+    order = models.ForeignKey('Order', blank=True)
 
     @staticmethod
     def validated():
@@ -409,7 +410,6 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True)
-    billets = models.ManyToManyField(Billet, blank=True)
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
