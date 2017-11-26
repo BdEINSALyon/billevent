@@ -7,9 +7,10 @@ from django import urls
 # Create your views here.
 from django.http import HttpResponse, HttpResponseNotFound
 from django.http.response import HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from mercanet import calculateSeal
+#from mercanet import calculateSeal
 from mercanet import sealTransaction
 from mercanet.models import TransactionMercanet, TransactionRequest
 from mercanet.serializers import TransactionMercanetSerializer
@@ -79,23 +80,25 @@ class MercanetViewSet:
         urlMercanet = os.environ['MERCANET_URL']
         automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']
         donneesPourMercanet = {
-            'amount': amount, "currencyCode": 978, "interfaceVersion": interfaceVersion,
-            "keyVersion": keyVersion, "merchantId": merchantId,
-            "normalReturnUrl": normalReturnUrl, "orderChannel": "INTERNET",
-            "transactionReference": transactionReference, "automaticResponseUrl": automaticResponseUrl
+            'amount': amount,
+            'currencyCode': 978,
+            'interfaceVersion': interfaceVersion,
+            'keyVersion': keyVersion,
+            'merchantId': merchantId,
+            'normalReturnUrl': normalReturnUrl,
+            'orderChannel': 'INTERNET',
+            'transactionReference': transactionReference,
+            'automaticResponseUrl': automaticResponseUrl
         }
-        seal = calculateSeal.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"])
-        donneesPourMercanet['Seal'] = seal
+        seal = sealTransaction.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"])
+        seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"])
+        donneesPourMercanet['seal'] = seal
 
         r = requests.post(urlMercanet, json=donneesPourMercanet,verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = r.json()
-        réponse.write(reponseMercanet)
-        réponse.write('<br><br>')
-        réponse.write(data)
-        réponse.write('<br>')
-        réponse.write(seal)
         if reponseMercanet["redirectionStatusCode"] == "94":
             return HttpResponse("<h1 style='font-size: 100; color: red'>TRANSACTION   DUPLIQUÉE</h1>")
+        elif reponseMercanet["redirectionStatusCode"] == "12": return HttpResponse("<h1 style='font-size: 100; color: red'>ERREUR SEAL</h1>")
         # reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON
         # pas besoin de parser; python-requests le fait tout seul
 
@@ -152,7 +155,6 @@ class MercanetViewSet:
         #       log("transaction invalide (partie BDD)")
         #       return HttpResponse("erreur interne BDD")
         else:
-            réponse.write("<br>ha! y'a pas eu assez d'erreurs pour que Django les affiche <3")
             log("erreur de communication avec Mercanet")
             return (réponse)
 
@@ -217,8 +219,7 @@ class MercanetViewSet:
         fichier.write(json.dumps(json_final))
         fichier.close()
         fichier = open('req.txt', 'a')
-        testSeal =
-        testSeal = calculateSeal.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"])
+        testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"])
         if testSeal == Seal:
             fichier.write("\nBRAVO")
         else:
