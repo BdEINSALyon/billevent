@@ -81,15 +81,6 @@ class EventSerializer(serializers.ModelSerializer):
         depth = 10
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    event = EventSerializer(read_only=True)
-
-    class Meta:
-        model = models.Order
-        fields = ('id', 'client', 'event')
-        depth = 0
-
-
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Client
@@ -114,6 +105,16 @@ class BilletSerializer(serializers.ModelSerializer):
         model = models.Billet
         fields = ('id', 'product', 'options')
         depth = 1
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    event = EventSerializer(read_only=True)
+    billets = BilletSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Order
+        fields = ('id', 'client', 'event', 'billets')
+        depth = 0
 
 
 class CategorieSerializer(serializers.ModelSerializer):

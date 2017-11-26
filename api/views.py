@@ -83,8 +83,6 @@ class EventsViewSet(viewsets.ModelViewSet):
         order.save()
 
         order.billets.all().delete()
-        # On enregistre "l'etat" de la BDD
-        transaction.atomic()
 
         # Si il y a un champ billets dans les données renvoyées
         if "billets" in request.data:
@@ -97,12 +95,12 @@ class EventsViewSet(viewsets.ModelViewSet):
                         billet_data.validated_data['order'] = order
                         billet = billet_data.create(billet_data.validated_data)
                         billet.save()
-
+        ok = order.is_valid()
 
         # Si la commande ne répond pas aux règles
-        if not order.is_valid():
-            transaction.rollback()
-            return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER")
+        if not ok:
+            order.destroy_all()
+            return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER", status=400)
 
         order.status = order.STATUS_SELECT_OPTIONS
         order.save()
@@ -190,22 +188,11 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         # On change le statut de la commande à payé
         order.status = order.STATUS_PAYMENT
+        order.transaction = transaction_request
         order.save()
 
         # On renvoie l'url de paiement
-        return Response(request.build_absolute_uri(urls.reverse('mercanet-pay', args=[pk, transaction_request.token])))
-
-    @detail_route(methods=['post'])
-    def validate(self, request, pk=None):
-        """Permet de faire passer l'etat de la commande à payé"""
-        # On récupère la commande
-        order = self.get_queryset().get(id=pk)
-        if order.transaction.status == TransactionRequest.STATUSES['PAYED']:
-            order.status = order.STATUS_VALIDATED
-            order.save()
-            return Response(OrderSerializer(order).data)
-        return Response("La commande n'a pas été payée")
-
+        return Response(request.build_absolute_uri(urls.reverse('mercanet-pay', args=[transaction_request.id, transaction_request.token])))
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):

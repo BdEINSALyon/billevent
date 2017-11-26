@@ -25,7 +25,7 @@ class TransactionRequest(models.Model):
         'PAYED': 3,
         'REJECTED': 4
     }
-    mercanet = models.OneToOneField('TransactionMercanet', null=True, blank=True)
+    mercanet = models.OneToOneField('TransactionMercanet', null=True, blank=True, related_name='request')
     amount = models.IntegerField(verbose_name=_('montant en centimes d\'euros'))
     callback = models.CharField(max_length=2000, verbose_name=_('url de retour client'))
     started = models.BooleanField(verbose_name=_('pris en charge par mercanet'),default=False)

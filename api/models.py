@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.db.models import Sum, Count
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch.dispatcher import receiver
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -376,6 +376,7 @@ class Order(models.Model):
     STATUS_REVIEW_ORDER = 4
     STATUS_PAYMENT = 5
     STATUS_VALIDATED = 6
+    STATUS_REJECTED = 7
 
     STATUSES = (
         (STATUS_NOT_READY, _('Pas initialisée')),
@@ -393,6 +394,13 @@ class Order(models.Model):
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     transaction = models.ForeignKey(TransactionRequest,default=None, null=True)
     event = models.ForeignKey(Event)
+
+    def destroy_all(self):
+        for billet in self.billets.all():
+            for option in billet.billet_options.all():
+                option.delete()
+            billet.delete()
+        self.delete()
 
     @property
     def option_billet(self):
@@ -444,3 +452,19 @@ class Order(models.Model):
 
     def __str__(self):
         return "Commande #" + str(self.event.id) + "-" + str(self.id)
+
+
+@receiver(post_save, sender=TransactionMercanet)
+def update_order_on_card_transaction(instance, **kwargs):
+    try:
+        order = Order.objects.get(transaction__mercanet=instance)
+        request_status = instance.request.status
+        if request_status == TransactionRequest.STATUSES['PAYED']:
+            order.status = Order.STATUS_VALIDATED
+        elif request_status == TransactionRequest.STATUSES['REJECTED']:
+            order.status = Order.STATUS_REJECTED
+        order.save()
+    except Order.DoesNotExist:
+        pass
+
+
