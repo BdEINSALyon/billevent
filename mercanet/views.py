@@ -14,10 +14,14 @@ import requests #bon, urllib est pas content, je change, merci Gab
 from time import time
 from math import floor
 from django.http import HttpResponse
-from rest_framework.response import Response
-from django.http import HttpRequest
-from rest_framework.parsers import JSONParser
-from rest_framework.decorators import parser_classes
+from mercanet.models import TransactionMercanet
+from mercanet.serializers import TransactionMercanetSerializer
+def log(text):
+    f = open('mercanet.log', 'a')
+    for i in range(len(text)):
+        f.write(str(text[i]))
+    f.write('\n')
+    f.close()
 class MercanetViewSet:
     def pay(request, amount):
         réponse = HttpResponse()
@@ -46,34 +50,58 @@ class MercanetViewSet:
 
         #reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON
         #pas besoin de parser; python-requests le fait tout seul
-        try:
-            redirectionData = reponseMercanet["redirectionData"]  #on extrait les données à insérer dans la page pour le client
-            redirectionUrl = reponseMercanet["redirectionUrl"]      #url que le client va appeler
-            if (reponseMercanet["redirectionStatusCode"] == "00"):  # si la communication s'est bien passée (et le JSON n'est pas parsé en types)
-                context = {
-                # charge les données dans la page qu'on renvoie au client, qui le redirigera vers le paiement MercaNET
-                    "redirectionUrl": redirectionUrl,
-                    "redirectionData": redirectionData,
-                    "interfaceVersion": interfaceVersion
-                }
+
+        redirectionData = reponseMercanet["redirectionData"]  #on extrait les données à insérer dans la page pour le client
+        redirectionUrl = reponseMercanet["redirectionUrl"]      #url que le client va appeler
+        if (reponseMercanet["redirectionStatusCode"] == "00"):  # si la communication s'est bien passée (et le JSON n'est pas parsé en types)
+            context = {
+            # charge les données dans la page qu'on renvoie au client, qui le redirigera vers le paiement MercaNET
+                "redirectionUrl": redirectionUrl,
+                "redirectionData": redirectionData,
+                "interfaceVersion": interfaceVersion
+            }
+            dataToSerialize = {}
+            dataToSerialize["amount"]= amount
+            dataToSerialize["transactionReference"]= id
+            log(["donnés prêtes à être sérializées :id=", id, " montant=", amount])
+
+            transaction_data = TransactionMercanetSerializer(data=dataToSerialize, partial=True)
+            if transaction_data.is_valid():
+                transaction = transaction_data.create(transaction_data.validated_data)
+                transaction.save()
+                log("transaction saved")
                 return TemplateResponse(request, 'mercanet_redirect.html', context)
-            else:
-                réponse.write("<br>ha! y'a pas eu assez d'erreurs pour que Django les affiche <3")
-        except:
-            réponse.write("<br><br>JSON type non reçu, Mercanet a dû générer une erreur")
-        return (réponse)
+            else: log("serializer invalide")
+        #   transaction_data = TransactionMercanetSerializer(data=dataToSerialize)
+        #   log(["utilisateur va envoyé au paiement id= ",data["transactionReference", "amount= ", amount]])
+        #   if transaction_data.is_valid():
+        #       log("transaction is valid()")
+        #       transaction = transaction_data.create(transaction_data.validated_data)
+        #       transaction.save()
+        #       log("transaction saved")
+        #       return TemplateResponse(request, 'mercanet_redirect.html', context)
+        #   else:
+        #       log("transaction invalide (partie BDD)")
+        #       return HttpResponse("erreur interne BDD")
+        else:
+            réponse.write("<br>ha! y'a pas eu assez d'erreurs pour que Django les affiche <3")
+            log("erreur de communication avec Mercanet")
+            return (réponse)
 
 
             #reponseAutoFinale = json.loads(rr.read.decode(rr.info().get_param('charset') or 'utf-8'))
     def error(request):
         return HttpResponse("précisez un montant, exprimé en centimes.<br>Ex : 12€35 => /pay/1235")
+
     def check(request, id): #va falloir aller chercher dans les DB :(.
-        return HttpResponse(id)
+        return HttpResponse(TransactionMercanet.objects.get(transactionReference=id).responseCode)
+
     @csrf_exempt
     def autoMercanet(request, head): #gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
         fichier = open('req.txt', 'a')
         r = request.POST
         Seal = r.get("Seal")
+        log("INCOMING MERCANET REQUEST")
         InterfaceVersion = r.get('InterfaceVersion')
         data = ''.join(r.get("Data")).split('|') #reconstruit une liste des valeurs, qu'on sépare après pour les mettre dans un JSON
         cles, valeurs = [], []
@@ -82,20 +110,43 @@ class MercanetViewSet:
             ligne = ''.join(data[i]).split('=')
             cles.append(ligne[0])
             valeurs.append(ligne[1])
-            json_data[cles[i]] = valeurs[i] # on ajoute chaque clé avec sa valeur dans un dictionnaire
-        del json_data["keyVersion"]
-        json_data.pop("sealAlgorithm", None)
+            json_data[cles[i]] = valeurs[i] # on ajoute chaque clé avec sa valeur dans un dictionnair
+        del json_data["keyVersion"] # il ne faut pas les intégrer dans le calcul du Seal
+        json_data.pop("sealAlgorithm", None)   # autre méthode, on l'enlève
 
         json_final = { #on génére le JSON que DEVRAIT envoyer MercaNET au lieu de leur format texte de merde
             "InterfaceVersion" : InterfaceVersion,
             "Seal" : Seal,
             "Data" : json_data
         }
+        transactionReference = json_data["transactionReference"]
+        #json_data.pop("transactionReference")
+        #json_data.pop("amount")
+        transaction = TransactionMercanet.objects.get(transactionReference=transactionReference)
+        transaction_data = TransactionMercanetSerializer(transaction, data=json_data, partial=True)
+        log(["transaction chargée depuis ID ", transactionReference])
+
+        transaction_data.is_valid()
+        for key in transaction_data.errors:
+            log([" ser.err>",transaction_data.errors[key]])
+        if transaction_data.is_valid():
+            log("transaction is valid()")
+            transaction_data.update(transaction, transaction_data.validated_data) # ET PAS UPDATE, si on passe l'objet initial
+            transaction.save()
+            log("transaction updated")
+        else: log("erreur lors de la serialisation")
+   #    transaction_data = TransactionMercanetFinalSerializer(data=json_data)
+   #    log("transaction OK")
+   #    if transaction_data.is_valid():
+   #        log("transaction is valid()")
+   #        transaction = transaction_data.create(transaction, transaction_data.validated_data)
+   #        transaction.update()
+   #        log("transaction saved")
+
         fichier.write('\n')
         fichier.write(json.dumps(json_final))
         fichier.close()
         fichier = open('req.txt', 'a')
-        liste = sorted(json_data)
         testSeal = sealTransaction.sealFromList([valeurs for _,valeurs in sorted(zip(cles,valeurs))], os.environ["MERCANET_SECRET_KEY"])
         if testSeal == Seal:
             fichier.write("\nBRAVO")
@@ -103,7 +154,4 @@ class MercanetViewSet:
             fichier.write("\nDANGER : SEAL VERIFICATION FAILED\n")
             fichier.write(testSeal)
         fichier.close()
-
-
-
-
+        return HttpResponse("merci pour les 0% de commission <3")
