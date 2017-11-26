@@ -384,6 +384,10 @@ class Order(models.Model):
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
+    @property
+    def option_billet(self):
+        return self.billets.get_or_create(product=None)
+
     def is_valid(self):
         rules = self.sold_products_rules
         for rule in list(rules):

@@ -69,8 +69,37 @@ class EventsViewSet(viewsets.ModelViewSet):
                     if billet_data.is_valid():
                         billet = billet_data.create()
                         billet.save()
-
+        if not order.is_valid():
+            transaction.rollback()
+            return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER")
         # On dit que la commande est liée à un événement
+        return Response(OrderSerializer(order).data)
+
+    @detail_route(methods=['post'])
+    def options(self,request, pk=None):
+
+        event = Event.for_user(request.user).get(id=pk)
+        client = request.user.client
+
+        order = client.orders.get(event=event,status__lt=Order.STATUS_VALIDATED)
+        for optionbillet in request.data:
+            if "billet" in optionbillet and optionbillet['billet'].isDigit():
+                # Récupère le billet et renvoie une erreur si le billet n'est pas dans la commande
+                billet = order.billets.get(id=int(optionbillet['billet']))
+            else:
+                billet = order.option_billet
+
+            # Récupère l'option et renvoie une erreur si l' option n'est pas liée au produit du billet
+            option = billet.product.options.get(id=int(optionbillet['option']))
+            participant = None
+
+            if "participant" in optionbillet and optionbillet['participant'].isdigit():
+                participant = billet.participants.get(id=int(optionbillet['participant']))
+
+            BilletOption(billet=billet,option=option,amount=int(optionbillet['amount']),participant=participant).save()
+
+
+
         return Response(OrderSerializer(order).data)
 
 
@@ -78,7 +107,6 @@ class EventsViewSet(viewsets.ModelViewSet):
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Option.objects.all()
     serializer_class = OptionSerializer
-
 """
 
 
