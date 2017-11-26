@@ -221,17 +221,17 @@ class Billet(models.Model):
 
 class PricingRule(models.Model):
     class Meta:
-        verbose_name = _('Règles de poduits (Jauges/Limite')
+        verbose_name = _('Règles de poduits (Jauges/Limite)')
 
-    TYPE_T = "T"
-    TYPE_BYTI = "BYTI"
-    TYPE_BYI = "BYI"
+    TYPE_T = "MaxSeats"
+    TYPE_BYTI = "MaxProductByOrder"
+    TYPE_BYI = "CheckMaxProductForInvite"
     TYPE_VA = "VA"
     RULES = (
-        (TYPE_BYI, _("Limit by product by invitation")),
-        (TYPE_BYTI, _("Limit by total product by invitation")),
-        (TYPE_T, _("Global gap of product")),
-        (TYPE_VA, _("Require VA validation (not implemented)"))
+        (TYPE_BYI, _("Vérifie la limite par rapport aux invitations")),
+        (TYPE_BYTI, _("Limite le nombre dans une commande")),
+        (TYPE_T, _("Limite le nombre de personnes")),
+        # (TYPE_VA, _("Require VA validation (not implemented)"))
     )
     """
         :var type: Le type de règle
@@ -253,7 +253,7 @@ class PricingRule(models.Model):
         """
         if self.type == PricingRule.TYPE_T:
             count = 0
-            for pricing in self.pricings.all():
+            for pricing in self.pricings:
                 count += pricing.reserved_seats()
             return count <= self.value
         elif self.type == PricingRule.TYPE_BYI:
@@ -264,8 +264,8 @@ class PricingRule(models.Model):
                 return False
         elif self.type == PricingRule.TYPE_BYTI:
             count = 0
-            for pricing in self.pricings.all():
-                count += pricing.reserved_units(order.billets)
+            for pricing in self.pricings:
+                count += pricing.reserved_units(order.billets.all())
             return count <= self.value
         elif self.type == PricingRule.TYPE_VA:
             return True
@@ -274,7 +274,7 @@ class PricingRule(models.Model):
 
     @property
     def pricings(self):
-        return Product.objects.filter(rules=self) | Option.objects.filter(rules=self)
+        return list(set(Product.objects.filter(rules=self)).union(set(Option.objects.filter(rules=self))))
 
 
 class Participant(models.Model):
@@ -378,21 +378,49 @@ class Order(models.Model):
     event = models.ForeignKey(Event)
 
     def is_valid(self):
-        rules = set()
-        for products in self.products:
-            rules = rules + set(products.rules.all())
-        for option in self.options:
-            rules = rules + set(option.rules.all())
+        rules = self.sold_products_rules
         for rule in list(rules):
             if not rule.validate(self):
                 return False
         return True
 
     @property
+    def amount(self):
+        amount = 0
+        pricings_sold_into_that_order = self.sold_products
+        for pricing in list(pricings_sold_into_that_order):
+            amount += pricing.reserved_units(self.billets.all()) * pricing.price_ttc
+        return amount
+
+    @property
+    def amount_ht(self):
+        amount = 0
+        pricings_sold_into_that_order = self.sold_products
+        for pricing in list(pricings_sold_into_that_order):
+            amount += pricing.reserved_units(self.billets.all()) * pricing.price_ht
+        return amount
+
+    @property
+    def sold_products_rules(self):
+        rules = set()
+        for products in self.products:
+            rules = rules.union(set(products.rules.all()))
+        for option in self.options:
+            rules = rules.union(set(option.rules.all()))
+        return rules
+
+    @property
+    def sold_products(self):
+        return set(self.products).union(set(self.options))
+
+    @property
     def options(self):
-        return Option.objects.filter(billetoption__billet__in=self.billets)
+        return Option.objects.filter(billetoption__billet__in=self.billets.all())
 
     @property
     def products(self):
-        return Product.objects.filter(billets_in=self.billets)
+        return Product.objects.filter(billets__in=self.billets.all())
+
+    def __str__(self):
+        return "Commande #" + str(self.event.id) + "-" + str(self.id)
 
