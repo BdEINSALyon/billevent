@@ -15,7 +15,7 @@ from rest_framework_jwt.settings import api_settings
 
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
-from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer
+from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
 
@@ -57,6 +57,7 @@ class EventsViewSet(viewsets.ModelViewSet):
 
         order = client.orders.filter(event=event, status__lt=Order.STATUS_VALIDATED).first() or \
                 Order(event=event, client=client)
+        order.status = order.STATUS_SELECT_PRODUCT
         order.save()
 
         transaction.atomic()
@@ -69,10 +70,15 @@ class EventsViewSet(viewsets.ModelViewSet):
                     if billet_data.is_valid():
                         billet = billet_data.create()
                         billet.save()
+
         if not order.is_valid():
             transaction.rollback()
             return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER")
-        # On dit que la commande est liée à un événement
+
+        order.status = order.STATUS_SELECT_OPTIONS
+
+        order.save()
+
         return Response(OrderSerializer(order).data)
 
     @detail_route(methods=['post'])
@@ -80,8 +86,9 @@ class EventsViewSet(viewsets.ModelViewSet):
 
         event = Event.for_user(request.user).get(id=pk)
         client = request.user.client
-
         order = client.orders.get(event=event,status__lt=Order.STATUS_VALIDATED)
+        transaction.atomic()
+
         for optionbillet in request.data:
             if "billet" in optionbillet and optionbillet['billet'].isDigit():
                 # Récupère le billet et renvoie une erreur si le billet n'est pas dans la commande
@@ -98,9 +105,29 @@ class EventsViewSet(viewsets.ModelViewSet):
 
             BilletOption(billet=billet,option=option,amount=int(optionbillet['amount']),participant=participant).save()
 
+        if not order.is_valid():
+            transaction.rollback()
+            return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER")
 
+        order.status = order.STATUS_PAYMENT
+        order.save()
 
         return Response(OrderSerializer(order).data)
+
+    @detail_route(methods=['post'])
+    def participants(self,request,pk=None):
+        reponse = []
+        for participant_data in request.data:
+            participant_ser = ParticipantSerializer(data=participant_data)
+            if participant_ser.is_valid():
+                participant = participant_ser.create(participant_ser.validated_data)
+                participant.save()
+                reponse.append(ParticipantSerializer(participant).data)
+            else:
+                return Response(participant_ser.errors)
+
+        return Response(reponse)
+
 
 
 """

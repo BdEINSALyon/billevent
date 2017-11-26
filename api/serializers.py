@@ -43,6 +43,12 @@ class OptionSerializer(serializers.ModelSerializer):
                   'event', 'how_many_left')
 
 
+class ParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Participant
+        fields = "__all__"
+
+
 class ProductSerializer(serializers.ModelSerializer):
     rules = PricingRuleSerializer(many=True, read_only=True)
     options = OptionSerializer(many=True, read_only=True)
@@ -85,7 +91,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class ClientSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = models.Client
         fields = ('id', 'first_name', 'last_name', 'email', 'phone')

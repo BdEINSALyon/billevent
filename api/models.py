@@ -287,6 +287,9 @@ class Participant(models.Model):
     phone = models.CharField(max_length=255)
     billet = models.ForeignKey(Billet, related_name='participants')
 
+    def __str__(self):
+        return self.first_name +  " " + self.last_name + "  Billet N°" + str(self.billet.id)
+
 
 class Question(models.Model):
     QUESTIONS_TYPES = (
