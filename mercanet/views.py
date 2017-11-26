@@ -18,20 +18,44 @@ import math
 from django.http import HttpResponse
 from mercanet.models import TransactionMercanet
 from mercanet.serializers import TransactionMercanetSerializer
+import hashlib
 def log(text):
     f = open('mercanet.log', 'a')
     for i in range(len(text)):
         f.write(str(text[i]))
     f.write('\n')
     f.close()
+def genId(id):
+    return hashlib.sha1(bytearray(id.encode("UTF-8"))).hexdigest()[:35]
+rcList = {
+            "00": "Transaction acceptée",
+            "02": "Demande d’autorisation par téléphone à la banque à cause d’un dépassement du plafond d’autorisation sur la carte, si vous êtes autorisé à forcer les transactions",
+            "03": "Contrat commerçant invalide",
+            "05": "Autorisation refusée",
+            "11": "Utilisé dans le cas d'un contrôle différé. Le PAN est en opposition",
+            "12": "Transaction invalide, vérifier les paramètres transférés dans la requête",
+            "14": "Coordonnées du moyen de paiement invalides (ex: n° de carte ou cryptogramme visuel de la carte) ou vérification AVS échouée",
+            "17": "Annulation de l’acheteur",
+            "30": "Erreur de format",
+            "34": "Suspicion de fraude (seal erroné)",
+            "54": "Date de validité du moyen de paiement dépassée",
+            "75": "Nombre de tentatives de saisie des coordonnées du moyen de paiement sous Sips Paypage dépassé",
+            "90": "Service temporairement indisponible",
+            "94": "Transaction dupliquée : le transactionReference de la transaction est déjà utilisé",
+            "97": "Délai expiré, transaction refusée",
+            "99": "Problème temporaire du serveur de paiement.",
+        }
 class MercanetViewSet:
     def check(request, id): #va falloir aller chercher dans les DB :(.
-        transactionReference = int(1000 * math.exp(1 + float(id)))
+        #transactionReference = int(1000 * math.exp(1 + float(id)))
+        transactionReference = genId(id)
+ #utilisation d'un hash pour l'id mercanet
         rc = TransactionMercanet.objects.get(transactionReference=transactionReference).responseCode
-
+        return HttpResponse(rcList[rc])
     def pay(request, id):
         amount = int(Billet.objects.get(id=id).product.price_ttc * 100)
-        transactionReference = int(1000*math.exp(1+float(id)))
+        #transactionReference = int(1000*math.exp(1+float(id)))
+        transactionReference = genId(id)
         réponse = HttpResponse()
         interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
         keyVersion = os.environ['MERCANET_KEY_VERSION']
@@ -68,12 +92,21 @@ class MercanetViewSet:
                 "redirectionData": redirectionData,
                 "interfaceVersion": interfaceVersion
             }
-            dataToSerialize = {}
-            dataToSerialize["amount"]= amount
-            dataToSerialize["transactionReference"]= transactionReference
+            dataToSerialize = {
+                "amount" : amount,
+                "transactionReference" : transactionReference,
+                "id" : id
+            }
+          # dataToSerialize = {}
+          # dataToSerialize["amount"]= amount
+          # dataToSerialize["transactionReference"]= transactionReference
+          # dataToSerialize["id"] = id
             log(["donnés prêtes à être sérializées :transactionReference=", transactionReference, " montant=", amount])
 
             transaction_data = TransactionMercanetSerializer(data=dataToSerialize, partial=True)
+            transaction_data.is_valid()
+            for key in transaction_data.errors:
+                log([" ser.err>", transaction_data.errors[key]])
             if transaction_data.is_valid():
                 transaction = transaction_data.create(transaction_data.validated_data)
                 transaction.save()
@@ -125,6 +158,7 @@ class MercanetViewSet:
             "Data" : json_data
         }
         transactionReference = json_data["transactionReference"]
+        json_data["responseText"] = rcList[json_data['responseCode']] #on affiche joliment le status (MercaNET) de la commande
         #json_data.pop("transactionReference")
         #json_data.pop("amount")
         transaction = TransactionMercanet.objects.get(transactionReference=transactionReference)
