@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 
+from api.models import Billet
 from mercanet import sealTransaction
 import os
 import json
@@ -13,6 +14,7 @@ import requests #bon, urllib est pas content, je change, merci Gab
 # Create your views here.
 from time import time
 from math import floor
+import math
 from django.http import HttpResponse
 from mercanet.models import TransactionMercanet
 from mercanet.serializers import TransactionMercanetSerializer
@@ -23,22 +25,27 @@ def log(text):
     f.write('\n')
     f.close()
 class MercanetViewSet:
-    def pay(request, amount):
+    def check(request, id): #va falloir aller chercher dans les DB :(.
+        transactionReference = int(1000 * math.exp(1 + float(id)))
+        rc = TransactionMercanet.objects.get(transactionReference=transactionReference).responseCode
+
+    def pay(request, id):
+        amount = int(Billet.objects.get(id=id).product.price_ttc * 100)
+        transactionReference = int(1000*math.exp(1+float(id)))
         réponse = HttpResponse()
-        id = int(floor(time()))
         interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
         keyVersion = os.environ['MERCANET_KEY_VERSION']
         merchantId = os.environ['MERCANET_MERCHANT_ID']
         normalReturnUrl = os.environ['NORMAL_RETURN_URL']
         urlMercanet = os.environ['MERCANET_URL']
         automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']
-        #seal = sealTransaction.sealHash(amount, interfaceVersion, merchantId, normalReturnUrl, id, os.environ['MERCANET_SECRET_KEY'])
-        seal = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", id], os.environ["MERCANET_SECRET_KEY"]) #les champs doivent être triés par ordre alphabétique
+        #seal = sealTransaction.sealHash(amount, interfaceVersion, merchantId, normalReturnUrl, transactionReference, os.environ['MERCANET_SECRET_KEY'])
+        seal = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"]) #les champs doivent être triés par ordre alphabétique
 
         data = {"amount": amount, "currencyCode":978, "interfaceVersion": interfaceVersion,
                 "keyVersion" : keyVersion, "merchantId" : merchantId,
                           "normalReturnUrl" : normalReturnUrl, "orderChannel" : "INTERNET",
-                "transactionReference" : id, "automaticResponseUrl" : automaticResponseUrl,
+                "transactionReference" : transactionReference, "automaticResponseUrl" : automaticResponseUrl,
                 "seal" : seal}
         r = requests.post(urlMercanet, json=data,verify=False)  #on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = r.json()
@@ -47,7 +54,8 @@ class MercanetViewSet:
         réponse.write(data)
         réponse.write('<br>')
         réponse.write(seal)
-
+        if reponseMercanet["redirectionStatusCode"] == "94":
+            return HttpResponse("<h1 style='font-size: 100; color: red'>TRANSACTION   DUPLIQUÉE</h1>")
         #reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON
         #pas besoin de parser; python-requests le fait tout seul
 
@@ -62,8 +70,8 @@ class MercanetViewSet:
             }
             dataToSerialize = {}
             dataToSerialize["amount"]= amount
-            dataToSerialize["transactionReference"]= id
-            log(["donnés prêtes à être sérializées :id=", id, " montant=", amount])
+            dataToSerialize["transactionReference"]= transactionReference
+            log(["donnés prêtes à être sérializées :transactionReference=", transactionReference, " montant=", amount])
 
             transaction_data = TransactionMercanetSerializer(data=dataToSerialize, partial=True)
             if transaction_data.is_valid():
@@ -73,7 +81,7 @@ class MercanetViewSet:
                 return TemplateResponse(request, 'mercanet_redirect.html', context)
             else: log("serializer invalide")
         #   transaction_data = TransactionMercanetSerializer(data=dataToSerialize)
-        #   log(["utilisateur va envoyé au paiement id= ",data["transactionReference", "amount= ", amount]])
+        #   log(["utilisateur va envoyé au paiement transactionReference= ",data["transactionReference", "amount= ", amount]])
         #   if transaction_data.is_valid():
         #       log("transaction is valid()")
         #       transaction = transaction_data.create(transaction_data.validated_data)
@@ -92,9 +100,6 @@ class MercanetViewSet:
             #reponseAutoFinale = json.loads(rr.read.decode(rr.info().get_param('charset') or 'utf-8'))
     def error(request):
         return HttpResponse("précisez un montant, exprimé en centimes.<br>Ex : 12€35 => /pay/1235")
-
-    def check(request, id): #va falloir aller chercher dans les DB :(.
-        return HttpResponse(TransactionMercanet.objects.get(transactionReference=id).responseCode)
 
     @csrf_exempt
     def autoMercanet(request, head): #gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
