@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'corsheaders',
     'api.apps.ApiConfig',
+    'mercanet'
 ]
 
 MIDDLEWARE = [
