@@ -212,43 +212,13 @@ class BilletOption(models.Model):
 class Billet(models.Model):
     product = models.ForeignKey(Product, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
+    order = models.ForeignKey('Order', null=True, related_name='billets')
 
     @staticmethod
     def validated():
         return Billet.objects.filter(
             order__status__lt=Order.STATUS_VALIDATED, order__created_at__gte=timezone.now() - timedelta(minutes=20)
         ) | Billet.objects.filter(order__status=Order.STATUS_VALIDATED)
-
-    # def save(self, force_insert=False, force_update=False, using=None,
-    #          update_fields=None):
-    #     # On vérifie d'abord que le modèle est clean
-    #
-    #
-    #     # On vérifie si le billet existe déja dans la BDD
-    #     if self in Billet.objects.all().values():
-    #         # Pour chaque option du billet
-    #         for option in self.options.all().values():
-    #             if Option.objects.get(id=option.id).how_many_left > 0:
-    #                 print("Billet existant !")
-    #                 # @TODO Faire différence billet actuel - ancien billet
-    #         pass
-    #     # Ensuite, on vérifie qu'il reste encore assez de place
-    #     else:
-    #
-    #         # Si il reste encore des produits dispos
-    #         if Product.objects.get(id=self.product.id).how_many_left > 0:
-    #             # On regarde pour chaque Option si il y en a assez de dispo
-    #             for option in self.options.all().only("id").values("id"):
-    #                 if Option.objects.get(id=option['id']).how_many_left < 1:
-    #                     raise ValidationError(
-    #                         "Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
-    #         else:
-    #             raise ValidationError(
-    #                 "Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
-    #
-    #     # Une fois notre vérification effectuée, on enregistre l'objet
-    #     super().save(force_insert=force_insert, force_update=force_update, using=using,
-    #                  update_fields=update_fields)
 
     def __str__(self):
         return str("Billet n°" + str(self.id))
@@ -409,7 +379,6 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True)
-    billets = models.ManyToManyField(Billet, blank=True)
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
