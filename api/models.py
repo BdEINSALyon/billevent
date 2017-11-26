@@ -259,7 +259,7 @@ class PricingRule(models.Model):
         if self.type == PricingRule.TYPE_T:
             count = 0
             for pricing in self.pricings.all():
-                count += pricing.reserved_units()
+                count += pricing.reserved_seats()
             return count <= self.value
         elif self.type == PricingRule.TYPE_BYI:
             try:
