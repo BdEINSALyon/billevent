@@ -288,7 +288,7 @@ class Participant(models.Model):
     billet = models.ForeignKey(Billet, related_name='participants')
 
     def __str__(self):
-        return self.first_name +  " " + self.last_name + "  Billet N°" + str(self.billet.id)
+        return self.first_name + " " + self.last_name + "  Billet N°" + str(self.billet.id)
 
 
 class Question(models.Model):
@@ -364,26 +364,30 @@ def before_save_client_map_user(instance, **kwargs):
 
 
 class Order(models.Model):
-
     class Meta:
         verbose_name = _("commande")
 
     STATUS_NOT_READY = 0
     STATUS_SELECT_PRODUCT = 1
-    STATUS_SELECT_OPTIONS = 2
-    STATUS_PAYMENT = 3
-    STATUS_VALIDATED = 5
+    STATUS_SELECT_PARTICIPANT = 2
+    STATUS_SELECT_OPTIONS = 3
+    STATUS_REVIEW_ORDER = 4
+    STATUS_PAYMENT = 5
+    STATUS_VALIDATED = 6
+
     STATUSES = (
         (STATUS_NOT_READY, _('Pas initialisée')),
         (STATUS_SELECT_PRODUCT, _('Sélection des produits')),
         (STATUS_SELECT_OPTIONS, _('Sélection des options')),
         (STATUS_PAYMENT, _('Paiement')),
         (STATUS_VALIDATED, _('Confirmée')),
+        (STATUS_REVIEW_ORDER, _('Commande en cours de confirmation par le client')),
+        (STATUS_SELECT_PARTICIPANT, _('Sélection des participants')),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    client = models.ForeignKey(Client, blank=True, null=True,related_name="orders")
+    client = models.ForeignKey(Client, blank=True, null=True, related_name="orders")
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
@@ -437,4 +441,3 @@ class Order(models.Model):
 
     def __str__(self):
         return "Commande #" + str(self.event.id) + "-" + str(self.id)
-

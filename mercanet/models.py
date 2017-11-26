@@ -28,7 +28,7 @@ class TransactionRequest(models.Model):
     mercanet = models.OneToOneField('TransactionMercanet', null=True, blank=True)
     amount = models.IntegerField(verbose_name=_('montant en centimes d\'euros'))
     callback = models.CharField(max_length=2000, verbose_name=_('url de retour client'))
-    started = models.BooleanField(verbose_name=_('pris en charge par mercanet'))
+    started = models.BooleanField(verbose_name=_('pris en charge par mercanet'),default=False)
     token = models.CharField(verbose_name=_('clef d\'accès'), default=generate_token, max_length=127)
 
     @property

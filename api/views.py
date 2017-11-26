@@ -16,8 +16,10 @@ from rest_framework_jwt.settings import api_settings
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer
+from mercanet.models import TransactionRequest
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
+from django import urls
 
 plus_disponible_view = Response("Ce que vous demandez n'est plus disponible", status=status.HTTP_200_OK)
 invalid_request_view = Response("Requête invalide, les paramètres spécifiés dans le POST sont non conformes",
@@ -82,11 +84,11 @@ class EventsViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
 
     @detail_route(methods=['post'])
-    def options(self,request, pk=None):
+    def options(self, request, pk=None):
 
         event = Event.for_user(request.user).get(id=pk)
         client = request.user.client
-        order = client.orders.get(event=event,status__lt=Order.STATUS_VALIDATED)
+        order = client.orders.get(event=event, status__lt=Order.STATUS_VALIDATED)
         transaction.atomic()
 
         for optionbillet in request.data:
@@ -103,7 +105,8 @@ class EventsViewSet(viewsets.ModelViewSet):
             if "participant" in optionbillet and optionbillet['participant'].isdigit():
                 participant = billet.participants.get(id=int(optionbillet['participant']))
 
-            BilletOption(billet=billet,option=option,amount=int(optionbillet['amount']),participant=participant).save()
+            BilletOption(billet=billet, option=option, amount=int(optionbillet['amount']),
+                         participant=participant).save()
 
         if not order.is_valid():
             transaction.rollback()
@@ -115,19 +118,22 @@ class EventsViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
 
     @detail_route(methods=['post'])
-    def participants(self,request,pk=None):
+    def participants(self, request, pk=None):
+        # Stockera les participants créés
         reponse = []
+        # Pour chaque participant dans le JSON
         for participant_data in request.data:
+            # On crée le sérializer et on regarde si il est valide, comme d'hab
             participant_ser = ParticipantSerializer(data=participant_data)
             if participant_ser.is_valid():
                 participant = participant_ser.create(participant_ser.validated_data)
                 participant.save()
+                # On ajoute le JSON du participant à la réponse
                 reponse.append(ParticipantSerializer(participant).data)
             else:
                 return Response(participant_ser.errors)
 
         return Response(reponse)
-
 
 
 """
@@ -139,13 +145,28 @@ class OptionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        event_id = self.request.GET.get("event")
-        if event_id is None:
-            raise APIException('No event id given', 400)
-
         return Order.objects.filter(client__user=self.request.user)
+
+    @detail_route(methods=['post'])
+    def pay(self, request, pk=None):
+        # On récupère la commande
+        order = self.get_queryset().get(id=pk)
+        # On récupère l'url de callback pour mercanet (Je sais pas ce que c'est mais c'est le front qui me l'envoie)
+        callback = request.data['callback']
+
+        # On crée une requête de transaction
+        transaction_request = TransactionRequest(callback=callback, amount=order.amount * 100)
+        transaction_request.save()
+
+        # On change le statut de la commande à payé
+        order.status = order.STATUS_PAYMENT
+        order.save()
+
+        # On renvoie l'url de paiement
+        return Response(request.build_absolute_uri(urls.reverse('mercanet-pay', args=[pk, transaction_request.token])))
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
