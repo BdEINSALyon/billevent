@@ -34,6 +34,14 @@ class EventsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Event.for_user(self.request.user)
 
+    @detail_route(methods=['post'])
+    def create(self, request, *args, **kwargs):
+        return Response("Cannot create an event")
+
+    @detail_route(methods=['put'])
+    def update(self, request, *args, **kwargs):
+        return Response("Cannot update an Event")
+
     @detail_route(methods=['get'])
     def order(self, request, pk=None):
         """
@@ -97,7 +105,6 @@ class EventsViewSet(viewsets.ModelViewSet):
                         billet_data.validated_data['order'] = order
                         billet = billet_data.create(billet_data.validated_data)
                         billet.save()
-
 
         # Si la commande ne répond pas aux règles
         if not order.is_valid():
@@ -205,7 +212,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             order.save()
             return Response(OrderSerializer(order).data)
         return Response("La commande n'a pas été payée")
-
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
