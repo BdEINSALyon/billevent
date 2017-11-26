@@ -112,12 +112,7 @@ class Pricing(models.Model):
                 .aggregate(total=Sum('amount'))['total']
 
     def reserved_seats(self, billets=None):
-        if billets is None:
-            billets = Billet.validated()
-        if type(self) is Product:
-            return billets.filter(product=self).aggregate(total=Count('id'))['total'] * self.seats
-        if type(self) is Option:
-            return self.reserved_units(billets)
+        return self.reserved_units(billets) * self.seats
 
     @property
     def how_many_left(self) -> int:
@@ -210,7 +205,7 @@ class BilletOption(models.Model):
 
 
 class Billet(models.Model):
-    product = models.ForeignKey(Product, related_name='billets')
+    product = models.ForeignKey(Product, null=True, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
     order = models.ForeignKey('Order', null=True, related_name='billets')
 
