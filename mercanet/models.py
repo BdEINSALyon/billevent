@@ -6,6 +6,14 @@ from django.utils.translation import ugettext_lazy as _
 def generate_token():
     return get_random_string(127)
 
+class MercanetToken(models.Model):
+    class Meta:
+        verbose_name_plural = _('identification de Mercanet auprès de billevent')
+    serverToken = models.CharField(verbose_name=_('clef d\'identification du serveur Mercanet'), default=generate_token, max_length=127)
+    transactionReference = models.CharField(max_length=35 ,verbose_name=_('UUID (Référence MercaNET)')) #oui je sais c'est un duplicata, mais j'en ai besoin avant de créer un objet TransactionMercanet
+    mercanet2 = models.OneToOneField('TransactionMercanet', null=True, blank=True)
+    def __str__(self):
+        return str(self.id)+" - "+self.transactionReference
 
 class TransactionRequest(models.Model):
     class Meta:
@@ -17,7 +25,6 @@ class TransactionRequest(models.Model):
         'PAYED': 3,
         'REJECTED': 4
     }
-
     mercanet = models.OneToOneField('TransactionMercanet', null=True, blank=True)
     amount = models.IntegerField(verbose_name=_('montant en centimes d\'euros'))
     callback = models.CharField(max_length=2000, verbose_name=_('url de retour client'))

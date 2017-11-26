@@ -168,4 +168,4 @@ os.environ['NORMAL_RETURN_URL'] = 'http://jean.netlib.re'
 #os.environ['MERCANET_URL'] = "https://payment-webinit.simu.mercanet.bnpparibas.net/paymentInit"
 os.environ['MERCANET_URL'] = "https://payment-webinit-mercanet.test.sips-atos.com/rs-services/v2/paymentInit" #à garder, MercaNET se sont trompés dans leur doc
 os.environ['MERCANET_SECRET_KEY'] = "S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o"
-os.environ['MERCANET_REPONSE_AUTO_URL'] = "http://mercanet.jeanribes.ultrahook.com/pay/auto/mercanet-sent"
+os.environ['MERCANET_REPONSE_AUTO_URL'] = "http://mercanet.jeanribes.ultrahook.com/pay/auto/"

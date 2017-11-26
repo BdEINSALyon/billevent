@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 #from mercanet import calculateSeal
 from mercanet import sealTransaction
-from mercanet.models import TransactionMercanet, TransactionRequest
+from mercanet.models import TransactionMercanet, TransactionRequest, MercanetToken
 from mercanet.serializers import TransactionMercanetSerializer
 
 
@@ -32,7 +32,7 @@ rcList = {
     "00": "Transaction acceptée",
     "02": "Demande d’autorisation par téléphone à la banque à cause d’un dépassement du plafond d’autorisation sur la carte, si vous êtes autorisé à forcer les transactions",
     "03": "Contrat commerçant invalide",
-    "05": "Autorisation refusée",
+    "05": "Refus 3DSecure",
     "11": "Utilisé dans le cas d'un contrôle différé. Le PAN est en opposition",
     "12": "Transaction invalide, vérifier les paramètres transférés dans la requête",
     "14": "Coordonnées du moyen de paiement invalides (ex: n° de carte ou cryptogramme visuel de la carte) ou vérification AVS échouée",
@@ -72,25 +72,29 @@ class MercanetViewSet:
 
         # transactionReference = int(1000*math.exp(1+float(id)))
         transactionReference = genId(id)
+        mercanetToken = MercanetToken()
+        mercanetToken.transactionReference = transactionReference
+        mercanetToken.save()    #on enregistre les infos et ça crée un token de transaction pour le serveur
+
         réponse = HttpResponse()
         interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
         keyVersion = os.environ['MERCANET_KEY_VERSION']
         merchantId = os.environ['MERCANET_MERCHANT_ID']
         normalReturnUrl = request.build_absolute_uri(urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
         urlMercanet = os.environ['MERCANET_URL']
-        automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']
+        automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']+str(mercanetToken.serverToken) #oui je sais il faut faire pareil que au-dessus, mais si on le fait ça passera pas par le proxy Ultrahook
         donneesPourMercanet = {
-            'amount': amount,
             'currencyCode': 978,
             'interfaceVersion': interfaceVersion,
             'keyVersion': keyVersion,
             'merchantId': merchantId,
             'normalReturnUrl': normalReturnUrl,
             'orderChannel': 'INTERNET',
+            'amount': amount,
             'transactionReference': transactionReference,
             'automaticResponseUrl': automaticResponseUrl
         }
-        seal = sealTransaction.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"])
+        seal = sealTransaction.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"], False)
         seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"])
         donneesPourMercanet['seal'] = seal
 
@@ -165,13 +169,15 @@ class MercanetViewSet:
         return HttpResponse("usage : /pay/$id/$token")
 
     @csrf_exempt
-    def autoMercanet(request,
-                     head):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
+    def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
         fichier = open('req.txt', 'a')
         r = request.POST
         Seal = r.get("Seal")
+        log(['seal mercanet : ', Seal])
         log("INCOMING MERCANET REQUEST")
         InterfaceVersion = r.get('InterfaceVersion')
+        testSeal = sealTransaction.loneSeal(r.get("Data"), os.environ["MERCANET_SECRET_KEY"])
+        log(['seal recalculé : ', testSeal])
         data = ''.join(r.get("Data")).split(
             '|')  # reconstruit une liste des valeurs, qu'on sépare après pour les mettre dans un JSON
         cles, valeurs = [], []
@@ -180,19 +186,33 @@ class MercanetViewSet:
             ligne = ''.join(data[i]).split('=')
             cles.append(ligne[0])
             valeurs.append(ligne[1])
-            json_data[cles[i]] = valeurs[i]  # on ajoute chaque clé avec sa valeur dans un dictionnair
+            json_data[cles[i]] = valeurs[i]  # on ajoute chaque clé avec sa valeur dans un dictionnaire
+        log("json parsé")
 
         json_final = {  # on génére le JSON que DEVRAIT envoyer MercaNET au lieu de leur format texte de merde
             "InterfaceVersion": InterfaceVersion,
             "Seal": Seal,
             "Data": json_data
         }
+        #testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"], True)
         transactionReference = json_data["transactionReference"]
+        mercanetToken = MercanetToken.objects.get(transactionReference=transactionReference)
+        if mercanetToken.serverToken == head:
+            log("Mercanet est correctement authentifié")
+        elif MercanetToken.objects.filter(transactionReference=transactionReference)[0] == head or MercanetToken.objects.filter(transactionReference=transactionReference)[1] == head:
+            log("entrées dupliquées !") # ça devrait pas arriver si on repart de 0 sur la BDD Mercanet
+        else:
+            log("DANGER : MiTM attack ? Mercanet n'a pas répondu à la bonne adresse !!!!")
+            exit(1)
+        log(head)
+        log(mercanetToken.serverToken)
         json_data["responseText"] = rcList[
             json_data['responseCode']]  # on affiche joliment le status (MercaNET) de la commande
+        log("status mercanet verbeux rajouté au JSON")
         # json_data.pop("transactionReference")
         # json_data.pop("amount")
         transaction = TransactionMercanet.objects.get(transactionReference=transactionReference)
+        log('objet transaction récupéré')
         transaction_data = TransactionMercanetSerializer(transaction, data=json_data, partial=True)
         log(["transaction chargée depuis ID ", transactionReference])
 
@@ -207,24 +227,6 @@ class MercanetViewSet:
             log("transaction updated")
         else:
             log("erreur lors de la serialisation")
-        #    transaction_data = TransactionMercanetFinalSerializer(data=json_data)
-        #    log("transaction OK")
-        #    if transaction_data.is_valid():
-        #        log("transaction is valid()")
-        #        transaction = transaction_data.create(transaction, transaction_data.validated_data)
-        #        transaction.update()
-        #        log("transaction saved")
 
-        fichier.write('\n')
-        fichier.write(json.dumps(json_final))
-        fichier.close()
-        fichier = open('req.txt', 'a')
-        testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"])
-        if testSeal == Seal:
-            fichier.write("\nBRAVO")
-        else:
-            fichier.write(Seal)
-            fichier.write("\nDANGER : SEAL VERIFICATION FAILED\n")
-            fichier.write(testSeal)
-        fichier.close()
+        log(json.dumps(json_final))
         return HttpResponse("merci pour les 0% de commission <3")
