@@ -112,12 +112,7 @@ class Pricing(models.Model):
                 .aggregate(total=Sum('amount'))['total']
 
     def reserved_seats(self, billets=None):
-        if billets is None:
-            billets = Billet.validated()
-        if type(self) is Product:
-            return billets.filter(product=self).aggregate(total=Count('id'))['total'] * self.seats
-        if type(self) is Option:
-            return self.reserved_units(billets)
+        return self.reserved_units(billets) * self.seats
 
     @property
     def how_many_left(self) -> int:
@@ -210,8 +205,9 @@ class BilletOption(models.Model):
 
 
 class Billet(models.Model):
-    product = models.ForeignKey(Product, related_name='billets')
+    product = models.ForeignKey(Product, null=True, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
+    order = models.ForeignKey('Order', null=True, related_name='billets')
 
     @staticmethod
     def validated():
@@ -219,54 +215,23 @@ class Billet(models.Model):
             order__status__lt=Order.STATUS_VALIDATED, order__created_at__gte=timezone.now() - timedelta(minutes=20)
         ) | Billet.objects.filter(order__status=Order.STATUS_VALIDATED)
 
-    # def save(self, force_insert=False, force_update=False, using=None,
-    #          update_fields=None):
-    #     # On vérifie d'abord que le modèle est clean
-    #
-    #
-    #     # On vérifie si le billet existe déja dans la BDD
-    #     if self in Billet.objects.all().values():
-    #         # Pour chaque option du billet
-    #         for option in self.options.all().values():
-    #             if Option.objects.get(id=option.id).how_many_left > 0:
-    #                 print("Billet existant !")
-    #                 # @TODO Faire différence billet actuel - ancien billet
-    #         pass
-    #     # Ensuite, on vérifie qu'il reste encore assez de place
-    #     else:
-    #
-    #         # Si il reste encore des produits dispos
-    #         if Product.objects.get(id=self.product.id).how_many_left > 0:
-    #             # On regarde pour chaque Option si il y en a assez de dispo
-    #             for option in self.options.all().only("id").values("id"):
-    #                 if Option.objects.get(id=option['id']).how_many_left < 1:
-    #                     raise ValidationError(
-    #                         "Il n'y a plus assez d'options: " + str(Option.objects.get(id=option['id']).name))
-    #         else:
-    #             raise ValidationError(
-    #                 "Il n'y a plus assez de place pour: " + str(Option.objects.get(id=self.product.id).name))
-    #
-    #     # Une fois notre vérification effectuée, on enregistre l'objet
-    #     super().save(force_insert=force_insert, force_update=force_update, using=using,
-    #                  update_fields=update_fields)
-
     def __str__(self):
         return str("Billet n°" + str(self.id))
 
 
 class PricingRule(models.Model):
     class Meta:
-        verbose_name = _('Règles de poduits (Jauges/Limite')
+        verbose_name = _('Règles de poduits (Jauges/Limite)')
 
-    TYPE_T = "T"
-    TYPE_BYTI = "BYTI"
-    TYPE_BYI = "BYI"
+    TYPE_T = "MaxSeats"
+    TYPE_BYTI = "MaxProductByOrder"
+    TYPE_BYI = "CheckMaxProductForInvite"
     TYPE_VA = "VA"
     RULES = (
-        (TYPE_BYI, _("Limit by product by invitation")),
-        (TYPE_BYTI, _("Limit by total product by invitation")),
-        (TYPE_T, _("Global gap of product")),
-        (TYPE_VA, _("Require VA validation (not implemented)"))
+        (TYPE_BYI, _("Vérifie la limite par rapport aux invitations")),
+        (TYPE_BYTI, _("Limite le nombre dans une commande")),
+        (TYPE_T, _("Limite le nombre de personnes")),
+        # (TYPE_VA, _("Require VA validation (not implemented)"))
     )
     """
         :var type: Le type de règle
@@ -288,8 +253,8 @@ class PricingRule(models.Model):
         """
         if self.type == PricingRule.TYPE_T:
             count = 0
-            for pricing in self.pricings.all():
-                count += pricing.reserved_units()
+            for pricing in self.pricings:
+                count += pricing.reserved_seats()
             return count <= self.value
         elif self.type == PricingRule.TYPE_BYI:
             try:
@@ -299,8 +264,8 @@ class PricingRule(models.Model):
                 return False
         elif self.type == PricingRule.TYPE_BYTI:
             count = 0
-            for pricing in self.pricings.all():
-                count += pricing.reserved_units(order.billets)
+            for pricing in self.pricings:
+                count += pricing.reserved_units(order.billets.all())
             return count <= self.value
         elif self.type == PricingRule.TYPE_VA:
             return True
@@ -309,7 +274,7 @@ class PricingRule(models.Model):
 
     @property
     def pricings(self):
-        return Product.objects.filter(rules=self) | Option.objects.filter(rules=self)
+        return list(set(Product.objects.filter(rules=self)).union(set(Option.objects.filter(rules=self))))
 
 
 class Participant(models.Model):
@@ -409,26 +374,53 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True)
-    billets = models.ManyToManyField(Billet, blank=True)
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
     def is_valid(self):
-        rules = set()
-        for products in self.products:
-            rules = rules + set(products.rules.all())
-        for option in self.options:
-            rules = rules + set(option.rules.all())
+        rules = self.sold_products_rules
         for rule in list(rules):
             if not rule.validate(self):
                 return False
         return True
 
     @property
+    def amount(self):
+        amount = 0
+        pricings_sold_into_that_order = self.sold_products
+        for pricing in list(pricings_sold_into_that_order):
+            amount += pricing.reserved_units(self.billets.all()) * pricing.price_ttc
+        return amount
+
+    @property
+    def amount_ht(self):
+        amount = 0
+        pricings_sold_into_that_order = self.sold_products
+        for pricing in list(pricings_sold_into_that_order):
+            amount += pricing.reserved_units(self.billets.all()) * pricing.price_ht
+        return amount
+
+    @property
+    def sold_products_rules(self):
+        rules = set()
+        for products in self.products:
+            rules = rules.union(set(products.rules.all()))
+        for option in self.options:
+            rules = rules.union(set(option.rules.all()))
+        return rules
+
+    @property
+    def sold_products(self):
+        return set(self.products).union(set(self.options))
+
+    @property
     def options(self):
-        return Option.objects.filter(billetoption__billet__in=self.billets)
+        return Option.objects.filter(billetoption__billet__in=self.billets.all())
 
     @property
     def products(self):
-        return Product.objects.filter(billets_in=self.billets)
+        return Product.objects.filter(billets__in=self.billets.all())
+
+    def __str__(self):
+        return "Commande #" + str(self.event.id) + "-" + str(self.id)
 
