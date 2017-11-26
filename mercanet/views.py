@@ -1,17 +1,15 @@
-from django import urls
-from django.http.response import HttpResponseRedirect
-from django.template.response import TemplateResponse
 import hashlib
 import json
 import os
 
 import requests  # bon, urllib est pas content, je change, merci Gab
+from django import urls
 # Create your views here.
 from django.http import HttpResponse, HttpResponseNotFound
-from django.template.response import TemplateResponse
+from django.http.response import HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 
-from api.models import Billet
+from mercanet import calculateSeal
 from mercanet import sealTransaction
 from mercanet.models import TransactionMercanet, TransactionRequest
 from mercanet.serializers import TransactionMercanetSerializer
@@ -80,19 +78,16 @@ class MercanetViewSet:
         normalReturnUrl = request.build_absolute_uri(urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
         urlMercanet = os.environ['MERCANET_URL']
         automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']
-        # seal = sealTransaction.sealHash(amount, interfaceVersion, merchantId, normalReturnUrl, transactionReference, os.environ['MERCANET_SECRET_KEY'])
-        seal = sealTransaction.sealFromList(
-            [amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET",
-             transactionReference],
-            os.environ["MERCANET_SECRET_KEY"])  # les champs doivent être triés par ordre alphabétique
+        donneesPourMercanet = {
+            'amount': amount, "currencyCode": 978, "interfaceVersion": interfaceVersion,
+            "keyVersion": keyVersion, "merchantId": merchantId,
+            "normalReturnUrl": normalReturnUrl, "orderChannel": "INTERNET",
+            "transactionReference": transactionReference, "automaticResponseUrl": automaticResponseUrl
+        }
+        seal = calculateSeal.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"])
+        donneesPourMercanet['Seal'] = seal
 
-        data = {"amount": amount, "currencyCode": 978, "interfaceVersion": interfaceVersion,
-                "keyVersion": keyVersion, "merchantId": merchantId,
-                "normalReturnUrl": normalReturnUrl, "orderChannel": "INTERNET",
-                "transactionReference": transactionReference, "automaticResponseUrl": automaticResponseUrl,
-                "seal": seal}
-        r = requests.post(urlMercanet, json=data,
-                          verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
+        r = requests.post(urlMercanet, json=donneesPourMercanet,verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = r.json()
         réponse.write(reponseMercanet)
         réponse.write('<br><br>')
@@ -165,7 +160,7 @@ class MercanetViewSet:
             # reponseAutoFinale = json.loads(rr.read.decode(rr.info().get_param('charset') or 'utf-8'))
 
     def error(request):
-        return HttpResponse("précisez un montant, exprimé en centimes.<br>Ex : 12€35 => /pay/1235")
+        return HttpResponse("usage : /pay/$id/$token")
 
     @csrf_exempt
     def autoMercanet(request,
@@ -184,8 +179,6 @@ class MercanetViewSet:
             cles.append(ligne[0])
             valeurs.append(ligne[1])
             json_data[cles[i]] = valeurs[i]  # on ajoute chaque clé avec sa valeur dans un dictionnair
-        del json_data["keyVersion"]  # il ne faut pas les intégrer dans le calcul du Seal
-        json_data.pop("sealAlgorithm", None)  # autre méthode, on l'enlève
 
         json_final = {  # on génére le JSON que DEVRAIT envoyer MercaNET au lieu de leur format texte de merde
             "InterfaceVersion": InterfaceVersion,
@@ -224,11 +217,12 @@ class MercanetViewSet:
         fichier.write(json.dumps(json_final))
         fichier.close()
         fichier = open('req.txt', 'a')
-        testSeal = sealTransaction.sealFromList([valeurs for _, valeurs in sorted(zip(cles, valeurs))],
-                                                os.environ["MERCANET_SECRET_KEY"])
+        testSeal =
+        testSeal = calculateSeal.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"])
         if testSeal == Seal:
             fichier.write("\nBRAVO")
         else:
+            fichier.write(Seal)
             fichier.write("\nDANGER : SEAL VERIFICATION FAILED\n")
             fichier.write(testSeal)
         fichier.close()
