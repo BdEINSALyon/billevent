@@ -197,15 +197,18 @@ class BilletOption(models.Model):
     """
     Permet de relier une option à un billet
     """
+
+    class Meta:
+        verbose_name = _('lien entre une option et un billet')
+
     billet = models.ForeignKey('Billet', null=True, blank=True, related_name='billet_options')
-    order = models.ForeignKey('Order', null=True, blank=True, related_name='billet_options')
     option = models.ForeignKey(Option)
     amount = models.IntegerField(default=1)
     participant = models.ForeignKey('Participant', null=True, blank=True, related_name='options_by_billet')
 
 
 class Billet(models.Model):
-    product = models.ForeignKey(Product, null=True, related_name='billets')
+    product = models.ForeignKey(Product, null=True, blank=True, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
     order = models.ForeignKey('Order', null=True, related_name='billets')
 
@@ -358,6 +361,10 @@ def before_save_client_map_user(instance, **kwargs):
 
 
 class Order(models.Model):
+
+    class Meta:
+        verbose_name = _("commande")
+
     STATUS_NOT_READY = 0
     STATUS_SELECT_PRODUCT = 1
     STATUS_SELECT_OPTIONS = 2
