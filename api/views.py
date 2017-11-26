@@ -36,7 +36,17 @@ class EventsViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['get'])
     def order(self, request, pk=None):
+        """
+        JE C PAS CE QUE 9A FAIT ALED
+        Permet de récupérer les commandes liées à l'événement (Attention, seulement celle auquelles on a accès)
+
+        :param request:
+        :param pk: l'ID de l'event
+        :return: Un ser
+        """
+
         event = self.get_object()
+        # G RIEN COMPRIS
         order_id = 'order_' + event.id.__str__()
         if order_id in request.session:
             order = Order.objects.get(id=request.session[order_id])
@@ -48,23 +58,36 @@ class EventsViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['get'])
     def categorie(self, request, pk=None):
+        """Permet de récupérer toutes les catégories liées à l'évenement
+        """
         event = self.get_object()
         return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
 
     @detail_route(methods=['post'])
     def order(self, request, pk=None):
+        """Permet de créer une commande.
 
+         Il faut envoyer un dictionaire dont la valeur "billets" correspondt à un tableau contenat les billest
+        """
+
+        # On récupère l'évenement en s'assurant au passage que l'utilisateur a le droit  d'y accéder
         event = Event.for_user(request.user).get(id=pk)
+        # On récupère le client lié à l'user
         client = request.user.client
 
+        # On récupère la commande en cours si il en existe une, sinon on la crée
         order = client.orders.filter(event=event, status__lt=Order.STATUS_VALIDATED).first() or \
                 Order(event=event, client=client)
+        # On place le status en sélection de produit
         order.status = order.STATUS_SELECT_PRODUCT
         order.save()
 
+        # On enregistre "l'etat" de la BDD
         transaction.atomic()
 
+        # Si il y a un champ billets dans les données renvoyées
         if "billets" in request.data:
+            # Pour chaque billet dans l'array de billets
             for billet in request.data['billets']:
                 # Si le billet est update
                 if "id" not in billet:
@@ -73,12 +96,12 @@ class EventsViewSet(viewsets.ModelViewSet):
                         billet = billet_data.create()
                         billet.save()
 
+        # Si la commande ne répond pas aux règles
         if not order.is_valid():
             transaction.rollback()
             return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER")
 
         order.status = order.STATUS_SELECT_OPTIONS
-
         order.save()
 
         return Response(OrderSerializer(order).data)
