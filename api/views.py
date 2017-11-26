@@ -82,6 +82,7 @@ class EventsViewSet(viewsets.ModelViewSet):
         order.status = order.STATUS_SELECT_PRODUCT
         order.save()
 
+        order.billets.all().delete()
         # On enregistre "l'etat" de la BDD
         transaction.atomic()
 
@@ -93,8 +94,10 @@ class EventsViewSet(viewsets.ModelViewSet):
                 if "id" not in billet:
                     billet_data = BilletSerializer(data=billet, context={"order": order.id})
                     if billet_data.is_valid():
-                        billet = billet_data.create()
+                        billet_data.validated_data['order'] = order
+                        billet = billet_data.create(billet_data.validated_data)
                         billet.save()
+
 
         # Si la commande ne répond pas aux règles
         if not order.is_valid():
@@ -175,6 +178,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['post'])
     def pay(self, request, pk=None):
+        """Renvoie l'url vers la page de paiement, prend en paramètre post "callback" une adresse (JSP LAQUELLE C)"""
         # On récupère la commande
         order = self.get_queryset().get(id=pk)
         # On récupère l'url de callback pour mercanet (Je sais pas ce que c'est mais c'est le front qui me l'envoie)
@@ -190,6 +194,18 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         # On renvoie l'url de paiement
         return Response(request.build_absolute_uri(urls.reverse('mercanet-pay', args=[pk, transaction_request.token])))
+
+    @detail_route(methods=['post'])
+    def validate(self, request, pk=None):
+        """Permet de faire passer l'etat de la commande à payé"""
+        # On récupère la commande
+        order = self.get_queryset().get(id=pk)
+        if order.transaction.status == TransactionRequest.STATUSES['PAYED']:
+            order.status = order.STATUS_VALIDATED
+            order.save()
+            return Response(OrderSerializer(order).data)
+        return Response("La commande n'a pas été payée")
+
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):

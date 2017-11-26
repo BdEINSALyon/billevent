@@ -73,5 +73,6 @@ class TransactionMercanet(models.Model):
     paymentMeanType = models.CharField(max_length=20,verbose_name=_("type de paiement ex: CB, PayPal..."), blank=True, null=True)
     captureLimitDate = models.IntegerField(verbose_name=_("C koi ? temps pour annuler le paiement ?"), blank=True, null=True)
     cardProductCode = models.CharField(max_length=5,verbose_name=_("important ?"), blank=True, null=True)
+
     def __str__(self):
         return "Paiement #"+ str(self.id)+" - "+ str(self.amount/100) +"€"

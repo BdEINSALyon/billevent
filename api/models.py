@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 
+from mercanet.models import TransactionRequest, TransactionMercanet
+
 TARGETS = (
     ('Order', _('Globalement sur la commande')),
     ('Billet', _('Pour chaque billet')),
@@ -389,6 +391,7 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True, related_name="orders")
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
+    transaction = models.ForeignKey(TransactionRequest,default=None, null=True)
     event = models.ForeignKey(Event)
 
     @property
