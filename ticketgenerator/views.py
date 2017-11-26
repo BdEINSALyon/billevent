@@ -1,28 +1,31 @@
 from django.shortcuts import render
 
 # Create your views here.
-from django.http import HttpResponseNotFound
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from reportlab.lib.units import mm
 from reportlab.graphics.barcode import eanbc, qr, usps
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics import renderPDF
-from api.models import Billet, Event
+from datetime import datetime
+from api.models import Order, BilletOption
+
 
 def generate_ticket(request):
     uid = "12345678"
-    billet = Billet.objects.get(id=1)
-    participants = billet.participants.all()
-    order = billet.order
-    product = billet.product
-    client = order.client
-    event = Event.objects.get(name = "Gala 22 - INSA Lyon")
+    order = Order.objects.get(id=1)
+    event = order.event
     organizer = event.organizer
-
     if order.status != 5:
         return HttpResponseNotFound('<h1>Page not found</h1>')
+    client = order.client
+    billets = order.billets.all()
+    billet = billets[0]
+    participants = billet.participants.all()
+    product = billet.product
+    price = product.price_ttc
+
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
@@ -58,8 +61,17 @@ def generate_ticket(request):
         i += 20
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{}".format(participant.last_name))
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{}".format(participant.first_name))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Prix TTC : {} €".format(product.price_ttc))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Date d'émission : {}".format(order.updated_at))
+        billet_options = BilletOption.objects.filter(option__target='Participant', billet=billet)
+        for billet_option in billet_options:
+            i += 10
+            option = billet_option.option
+            option_name = option.name
+            amount = billet_option.amount
+            price += option.price_ttc * amount
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
+
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Prix TTC : {} €".format(price))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 50) * mm, "Date d'émission : {}".format(order.updated_at))
     p.setFont("Helvetica-Bold", 25)
     p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10) * mm, "{}".format(event.name))
     p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 15) * mm, "{} - {}".format(event.start_time, event.end_time))
@@ -69,10 +81,12 @@ def generate_ticket(request):
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 10) * mm, "Numéro : {}".format(billet.id))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 20) * mm, "Organisateur : {}".format(organizer.name))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 30) * mm, "Acheteur : {} {}".format(client.last_name, client.first_name))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(order.created_at))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(datetime.now()))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 50) * mm, "Numéro de commande : {}".format(order.id))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 60) * mm, "Valable pour : {} personnes".format(1 + int(i/20)))
-    p.drawImage("ticketgenerator/bde.png", A4[0] - (20 + 22.53) * mm, A4[1] - (20 + 30) * mm, width=22.53 * mm, height=30 * mm, mask=None)
+    pluriel = "personnes"
+    if (1 + i/20) < 2:
+        pluriel = "personne"
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 60) * mm, "Valable pour : {} {}".format(1 + int(i/20), pluriel))
     p.drawString(20 * mm, 40 * mm, "Billet vendu et édité par le {}, {}".format(organizer.name, organizer.address))
     p.drawString(20 * mm, 30 * mm, "Tél : {}".format(organizer.phone))
     p.drawString(20 * mm, 20 * mm, "Courriel : {}".format(organizer.email))
