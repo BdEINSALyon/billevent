@@ -177,6 +177,9 @@ class Invitation(models.Model):
     client = models.ForeignKey('Client', related_name='invitations', null=True, blank=True)
     token = models.CharField(max_length=32, default=generate_token)
 
+    def __str__(self):
+        return "Invitation client " + str(self.client)
+
     @property
     def bought_seats(self):
         billets = Billet.validated().filter(order__client=self.client)
@@ -334,6 +337,9 @@ class Question(models.Model):
     question_type = models.IntegerField(verbose_name=_('type de question'))
     required = models.BooleanField(default=False)
     target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
+
+    def __str__(self):
+        return self.question
 
 
 class Response(models.Model):
