@@ -1,6 +1,7 @@
 from django.shortcuts import render
 
 # Create your views here.
+from django.http import HttpResponseNotFound
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from django.http import HttpResponse
@@ -8,27 +9,20 @@ from reportlab.lib.units import mm
 from reportlab.graphics.barcode import eanbc, qr, usps
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics import renderPDF
-from api.models import Billet
+from api.models import Billet, Event
 
 def generate_ticket(request):
     uid = "12345678"
-    order = "NEOMATRIX"
-    participants = Billet.objects.get(id=1).participants.all()
-    client = Billet.objects.get(id=1).clients.all()
-    holder_last_name = "SKYWALKER"
-    holder_first_name = "Anakin"
-    buyer_last_name = "SKYWALKER"
-    buyer_first_name = "Luke"
-    status = "Payé"
-    price = 42
-    issuing_day = 6
-    issuing_month = 6
-    issuing_year = 6666
-    issuing_date = "{}/{}/{}".format(issuing_day, issuing_month, issuing_year)
-    order_day = 4
-    order_month = 2
-    order_year = 4242
-    order_date = "{}/{}/{}".format(order_day, order_month, order_year)
+    billet = Billet.objects.get(id=1)
+    participants = billet.participants.all()
+    order = billet.order
+    product = billet.product
+    client = order.client
+    event = Event.objects.get(name = "Gala 22 - INSA Lyon")
+    organizer = event.organizer
+
+    if order.status != 5:
+        return HttpResponseNotFound('<h1>Page not found</h1>')
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
@@ -64,25 +58,24 @@ def generate_ticket(request):
         i += 20
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{}".format(participant.last_name))
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{}".format(participant.first_name))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Statut : {}".format(status))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Prix TTC : {} €".format(price))
-    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 50) * mm, "Date d'émission : {}".format(issuing_date))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Prix TTC : {} €".format(product.price_ttc))
+    p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Date d'émission : {}".format(order.updated_at))
     p.setFont("Helvetica-Bold", 25)
-    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10) * mm, "Gala INSA Lyon 2018")
-    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 15) * mm, "9 et 10 février")
-    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 30) * mm, "La Sucrière")
+    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10) * mm, "{}".format(event.name))
+    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 15) * mm, "{} - {}".format(event.start_time, event.end_time))
+    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 30) * mm, "{}".format(event.place))
     p.setFont("Helvetica", 12)
-    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 40) * mm, "49-50 Quai Rambaud 69002 Lyon - France")
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 10) * mm, "Numéro : {}".format(uid))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 20) * mm, "Organisateur : BdE INSA Lyon")
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 30) * mm, "Acheteur : {} {}".format(buyer_last_name, buyer_first_name))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(client[0].date))
-    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 50) * mm, "Numéro de commande : {}".format(order))
+    p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 40) * mm, "{}".format(event.address))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 10) * mm, "Numéro : {}".format(billet.id))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 20) * mm, "Organisateur : {}".format(organizer.name))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 30) * mm, "Acheteur : {} {}".format(client.last_name, client.first_name))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 40) * mm, "Date de commande : {}".format(order.created_at))
+    p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 50) * mm, "Numéro de commande : {}".format(order.id))
     p.drawString(ba_width + (20 + 50) * mm, A4[1] - qr_y - (20 + 60) * mm, "Valable pour : {} personnes".format(1 + int(i/20)))
-    p.drawImage("ticketgenerator/bde.png", A4[0] - (20 + 22.53) * mm, A4[1] - (20 + 30) * mm, width=22.53 * mm,
-                height=30 * mm, mask=None)
-    p.drawString(20 * mm, 20 * mm,
-                 "Billet vendu et édité par le BdE INSA Lyon, 20 avenue Albert Einstein, 69621 Villeurbanne CEDEX")
+    p.drawImage("ticketgenerator/bde.png", A4[0] - (20 + 22.53) * mm, A4[1] - (20 + 30) * mm, width=22.53 * mm, height=30 * mm, mask=None)
+    p.drawString(20 * mm, 40 * mm, "Billet vendu et édité par le {}, {}".format(organizer.name, organizer.address))
+    p.drawString(20 * mm, 30 * mm, "Tél : {}".format(organizer.phone))
+    p.drawString(20 * mm, 20 * mm, "Courriel : {}".format(organizer.email))
     # Close the PDF object cleanly.
     p.showPage()
     p.save()
