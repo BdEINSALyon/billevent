@@ -1,6 +1,5 @@
 from django.contrib import admin
 from . import models
-from mercanet.models import TransactionMercanet
 
 
 @admin.register(models.Event,
@@ -15,6 +14,6 @@ from mercanet.models import TransactionMercanet
                 models.Categorie,
                 models.Client,
                 models.Order,
-                models.Participant,TransactionMercanet)
+                models.Participant)
 class BasicAdmin(admin.ModelAdmin):
     pass
