@@ -7,7 +7,6 @@ from django import urls
 # Create your views here.
 from django.http import HttpResponse, HttpResponseNotFound
 from django.http.response import HttpResponseRedirect
-from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
 
 #from mercanet import calculateSeal

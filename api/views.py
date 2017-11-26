@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
@@ -23,9 +24,10 @@ invalid_request_view = Response("Requête invalide, les paramètres spécifiés 
                                 status=status.HTTP_400_BAD_REQUEST)
 
 
-class EventsViewSet(viewsets.ReadOnlyModelViewSet):
+class EventsViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Event.for_user(self.request.user)
@@ -46,6 +48,30 @@ class EventsViewSet(viewsets.ReadOnlyModelViewSet):
     def categorie(self, request, pk=None):
         event = self.get_object()
         return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
+
+    @detail_route(methods=['post'])
+    def order(self, request, pk=None):
+
+        event = Event.for_user(request.user).get(id=pk)
+        client = request.user.client
+
+        order = client.orders.filter(event=event, status__lt=Order.STATUS_VALIDATED).first() or \
+                Order(event=event, client=client)
+        order.save()
+
+        transaction.atomic()
+
+        if "billets" in request.data:
+            for billet in request.data['billets']:
+                # Si le billet est update
+                if "id" not in billet:
+                    billet_data = BilletSerializer(data=billet, context={"order": order.id})
+                    if billet_data.is_valid():
+                        billet = billet_data.create()
+                        billet.save()
+
+        # On dit que la commande est liée à un événement
+        return Response(OrderSerializer(order).data)
 
 
 """

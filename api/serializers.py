@@ -80,8 +80,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Order
-        fields = ('id', 'client', 'event', 'billets')
-        depth = 10
+        fields = ('id', 'client', 'event')
+        depth = 0
 
 
 class ClientSerializer(serializers.ModelSerializer):

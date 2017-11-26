@@ -7,6 +7,7 @@ from . import models
                 models.PricingRule,
                 models.Product, models.Option,
                 models.Billet,
+                models.BilletOption,
                 models.Invitation,
                 models.PaymentMethod,
                 models.Question,
