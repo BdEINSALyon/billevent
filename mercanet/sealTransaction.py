@@ -25,16 +25,7 @@ def sealFromList(liste, cle_secrete):
 #interface_version :  #version du connecteur JSON fait par Mercanet
 # id_boutique : identifiant de la boutique mercanet achetée par Torrente
 # return_url : URL de retour sur notre site
-# transaction_id : ben l'ID de la transaction qu'on fait, que MercaNET utilisera aussi de son côté
-def sealFromJSON(liste, cle_secrete):
-    dataForSeal = ""
-    for valeur in liste :
-        dataForSeal += str(liste[valeur])  # rajoute chaque valeur à une string
-    data = bytearray(dataForSeal.encode("UTF-8"))  # met en forme la grande string
-    cle_encodee = bytearray(cle_secrete.encode("UTF-8"))  # met en forme la clé secrete
 
-    seal = hmac.new(cle_encodee, data, hashlib.sha256).hexdigest()
-    return seal
 def sealVerify(json_data, cle_secrete):
     #json_data = json.load(open('json.txt'))
     Seal = json_data["Seal"]
@@ -51,4 +42,17 @@ def sealVerify(json_data, cle_secrete):
 #sealVerify("a","S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o")
 
 
-
+def sealFromJson(request_dict, cle_secrete):
+    concat_string = ''
+    for key in sorted(request_dict):
+        if key == 'keyVersion':
+            continue
+        elif key == 'sealAlgorithm':
+            continue
+        else:
+            concat_string += str(request_dict[key])
+    message = bytearray(concat_string.encode("UTF-8"))
+    secret = bytearray(cle_secrete.encode("UTF-8"))
+    #seal = HMAC.new(key=secret, msg=message, digestmod=SHA256).hexdigest()
+    seal = hmac.new(key=secret, msg=message, digestmod=hashlib.sha256).hexdigest()
+    return seal
