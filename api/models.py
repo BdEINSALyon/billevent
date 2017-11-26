@@ -380,7 +380,7 @@ class Order(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    client = models.ForeignKey(Client, blank=True, null=True)
+    client = models.ForeignKey(Client, blank=True, null=True,related_name="orders")
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
     event = models.ForeignKey(Event)
 
