@@ -42,13 +42,15 @@ def sealVerify(json_data, cle_secrete):
 #sealVerify("a","S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o")
 
 
-def sealFromJson(request_dict, cle_secrete):
+def sealFromJson(request_dict, cle_secrete, reponse):
     concat_string = ''
     for key in sorted(request_dict):
         if key == 'keyVersion':
             continue
         elif key == 'sealAlgorithm':
             continue
+        #elif request_dict[key] == "null":
+        #    continue
         else:
             concat_string += str(request_dict[key])
     message = bytearray(concat_string.encode("UTF-8"))
@@ -56,3 +58,5 @@ def sealFromJson(request_dict, cle_secrete):
     #seal = HMAC.new(key=secret, msg=message, digestmod=SHA256).hexdigest()
     seal = hmac.new(key=secret, msg=message, digestmod=hashlib.sha256).hexdigest()
     return seal
+def loneSeal(data, cle_secrete):
+    return hmac.new(key=data.encode('utf-8'), msg=data.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
