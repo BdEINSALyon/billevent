@@ -1,11 +1,17 @@
 from django.core.signing import TimestampSigner
 from django.shortcuts import render
-from api.models import Billet, Event, Order
+from django.http import HttpResponseNotFound, Http404
+from api.models import Order
 from ticketgenerator import generator
 
 
 def generate_ticket(request, id):
     real_id = TimestampSigner().unsign(id)
-    order = Order.objects.get(id=real_id, status=Order.STATUS_VALIDATED)
+    try:
+        order = Order.objects.get(id=real_id)
+    except Order.DoesNotExist:
+        raise Http404("Does not exist")
+    if order.status != 6:
+        raise Http404("Does not exist")
     response = generator.generate(order)
     return response
