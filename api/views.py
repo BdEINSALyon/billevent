@@ -293,7 +293,8 @@ class RulesViews(APIView):
                 count += pricing.reserved_seats()
             return Response({'value': count})
         elif compute == 'InvitationsUsed':
-            return Response({'value': Invitation.objects.get(event=data['event'], client=request.user.client).bought_seats})
+            invitation = Invitation.objects.get(event=data['event'], client=request.user.client)
+            return Response({'value': invitation.bought_seats, 'limit': invitation.seats})
         else:
             return Response(data)
 
