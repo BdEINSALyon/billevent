@@ -171,7 +171,7 @@ def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, s
         '|')  # reconstruit une liste des valeurs, qu'on sépare après pour les mettre dans un JSON
     cles, valeurs = [], []
     json_data = {}
-    for i in range(0, 78):
+    for i in range(0, len(data)):
         ligne = ''.join(data[i]).split('=')
         cles.append(ligne[0])
         valeurs.append(ligne[1])

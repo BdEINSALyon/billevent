@@ -17,6 +17,7 @@ urlpatterns = [
     url(r'^authenticate/refresh$', refresh_jwt_token),
     url(r'^', include(router.urls)),
     url(r'^rules', views.RulesViews.as_view()),
+    url(r'^orders/(?P<id>[0-9]+)/final', views.OrderFinalViews.as_view()),
     url(r'^', include('rest_framework.urls', namespace='rest_framework')),
 
 ]

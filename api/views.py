@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
+from django.core.signing import TimestampSigner
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -54,7 +55,7 @@ class EventsViewSet(viewsets.ModelViewSet):
         client = request.user.client
 
         # On récupère la commande en cours si il en existe une, sinon on la crée
-        order = client.orders.filter(event=event, status__lt=Order.STATUS_VALIDATED).first() or \
+        order = client.orders.filter(event=event, status__lt=Order.STATUS_PAYMENT).first() or \
                 Order(event=event, client=client)
         order.save()
 
@@ -91,11 +92,11 @@ class EventsViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
 
     @detail_route(methods=['post'])
-    def options(self, request, pk=None):
+    def options(self, request, pk=None, *args, **kwargs):
 
         event = Event.for_user(request.user).get(id=pk)
         client = request.user.client
-        order = client.orders.get(event=event, status__lt=Order.STATUS_VALIDATED)
+        order = client.orders.get(event=event, status__lt=Order.STATUS_PAYMENT)
         transaction.atomic()
 
         for optionbillet in request.data:
@@ -126,6 +127,10 @@ class EventsViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['post'])
     def participants(self, request, pk=None):
+        event = Event.for_user(request.user).get(id=pk)
+        client = request.user.client
+        order = client.orders.get(event=event, status__lt=Order.STATUS_PAYMENT)
+
         # Stockera les participants créés
         reponse = []
         # Pour chaque participant dans le JSON
@@ -297,6 +302,27 @@ class RulesViews(APIView):
             return Response({'value': invitation.bought_seats, 'limit': invitation.seats})
         else:
             return Response(data)
+
+
+@permission_classes([])
+class OrderFinalViews(APIView):
+    def get(self, request, id):
+        order = Order.objects.get(id=id, client__user=request.user)
+
+        if order.status <= 5:
+            status = "waiting"
+        elif order.status <= 6:
+            status = "validated"
+        else:
+            status = "rejected"
+
+        tickets = request.build_absolute_uri(
+            urls.reverse('ticket-print', args=[TimestampSigner().sign(id)]))
+
+        return Response({
+            'status': status,
+            'url': tickets
+        })
 
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER

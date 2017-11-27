@@ -37,6 +37,8 @@ class TransactionRequest(models.Model):
             if self.mercanet is not None:
                 if self.mercanet.responseCode == "00":
                     return TransactionRequest.STATUSES['PAYED']
+                if len(self.mercanet.responseCode) == 2:
+                    return TransactionRequest.STATUSES['REJECTED']
                 elif self.mercanet.responseCode is None:
                     return TransactionRequest.STATUSES['PAYING']
                 elif self.started:
