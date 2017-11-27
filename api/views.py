@@ -35,35 +35,13 @@ class EventsViewSet(viewsets.ModelViewSet):
         return Event.for_user(self.request.user)
 
     @detail_route(methods=['get'])
-    def order(self, request, pk=None):
-        """
-        JE C PAS CE QUE 9A FAIT ALED
-        Permet de récupérer les commandes liées à l'événement (Attention, seulement celle auquelles on a accès)
-
-        :param request:
-        :param pk: l'ID de l'event
-        :return: Un ser
-        """
-
-        event = self.get_object()
-        # G RIEN COMPRIS
-        order_id = 'order_' + event.id.__str__()
-        if order_id in request.session:
-            order = Order.objects.get(id=request.session[order_id])
-        else:
-            order = Order(event=event)
-            order.save()
-            request.session[order_id] = order.id
-        return Response(OrderSerializer(order).data)
-
-    @detail_route(methods=['get'])
     def categorie(self, request, pk=None):
         """Permet de récupérer toutes les catégories liées à l'évenement
         """
         event = self.get_object()
         return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
 
-    @detail_route(methods=['post'])
+    @detail_route(methods=['get', 'post'])
     def order(self, request, pk=None):
         """Permet de créer une commande.
 
@@ -78,6 +56,11 @@ class EventsViewSet(viewsets.ModelViewSet):
         # On récupère la commande en cours si il en existe une, sinon on la crée
         order = client.orders.filter(event=event, status__lt=Order.STATUS_VALIDATED).first() or \
                 Order(event=event, client=client)
+        order.save()
+
+        if request.method == 'GET':
+            return Response(OrderSerializer(order).data)
+
         # On place le status en sélection de produit
         order.status = order.STATUS_SELECT_PRODUCT
         order.save()
@@ -192,7 +175,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.save()
 
         # On renvoie l'url de paiement
-        return Response(request.build_absolute_uri(urls.reverse('mercanet-pay', args=[transaction_request.id, transaction_request.token])))
+        return Response(request.build_absolute_uri(
+            urls.reverse('mercanet-pay', args=[transaction_request.id, transaction_request.token])))
+
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -291,6 +276,26 @@ class BilletViewSet(viewsets.ModelViewSet):
             except ValidationError as e:
                 return Response(e.message)
         return invalid_request_view
+
+
+@permission_classes([])
+class RulesViews(APIView):
+    def post(self, request):
+        data = request.data
+        compute = data['compute']
+        data = data['data']
+
+        if compute == 'MaxSeats':
+            pricings = list(set(Product.objects.filter(id__in=data['products']))
+                            .union(set(Option.objects.filter(id__in=data['options']))))
+            count = 0
+            for pricing in pricings:
+                count += pricing.reserved_seats()
+            return Response({'value': count})
+        elif compute == 'InvitationsUsed':
+            return Response({'value': Invitation.objects.get(event=data['event'], client=request.user.client).bought_seats})
+        else:
+            return Response(data)
 
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
