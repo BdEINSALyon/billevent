@@ -111,10 +111,10 @@ class Pricing(models.Model):
             return billets.filter(product=self).aggregate(total=Count('id'))['total']
         if type(self) is Option:
             return BilletOption.objects.filter(billet__in=billets, option=self) \
-                .aggregate(total=Sum('amount'))['total']
+                .aggregate(total=Sum('amount'))['total'] or 0
 
     def reserved_seats(self, billets=None):
-        return self.reserved_units(billets) * self.seats
+        return self.reserved_units(billets) * (self.seats or 1)
 
     @property
     def how_many_left(self) -> int:
@@ -123,7 +123,7 @@ class Pricing(models.Model):
         :return: Le nombre de produit restant ou -1 si il en reste une infinité/quantitée indé
         """
         try:
-            billets_max = type(self).objects.get(id=self.id).rules.get(type=PricingRule.TYPE_T).value
+            billets_max = type(self).objects.get(id=self.id).rules.find(type=PricingRule.TYPE_T).first().value
             nombre_billet = 0
 
             if type(self) is Product:
