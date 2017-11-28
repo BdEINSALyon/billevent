@@ -13,7 +13,7 @@ from reportlab.pdfgen import canvas
 from api.models import BilletOption
 
 
-def generate(order, uid):
+def generate(order):
 
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')

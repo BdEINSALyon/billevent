@@ -5,7 +5,7 @@ from api.models import Order
 from ticketgenerator import generator
 
 
-def generate_ticket(request):
+def generate_ticket(request, id):
     real_id = TimestampSigner().unsign(id)
     try:
         order = Order.objects.get(id=real_id)
