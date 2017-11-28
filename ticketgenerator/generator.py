@@ -30,6 +30,7 @@ def generate(order, uid):
         # Draw things on the PDF. Here's where the PDF generation happens.
         # See the ReportLab documentation for the full list of functionality.
         price = 0
+        uid = Signer().sign(billet.id)
         product = billet.product
         participants = billet.participants.all()
         if product:

@@ -5,7 +5,7 @@ from api.models import Order
 from ticketgenerator import generator
 
 
-def generate_ticket(request, id):
+def generate_ticket(request):
     real_id = TimestampSigner().unsign(id)
     try:
         order = Order.objects.get(id=real_id)
@@ -13,5 +13,5 @@ def generate_ticket(request, id):
         raise Http404("Does not exist")
     if order.status != 6:
         raise Http404("Does not exist")
-    response = generator.generate(order, id)
+    response = generator.generate(order)
     return response
