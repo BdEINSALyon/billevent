@@ -13,5 +13,5 @@ def generate_ticket(request, id):
         raise Http404("Does not exist")
     if order.status != 6:
         raise Http404("Does not exist")
-    response = generator.generate(order)
+    response = generator.generate(order, id)
     return response

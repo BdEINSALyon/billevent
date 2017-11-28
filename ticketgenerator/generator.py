@@ -13,7 +13,7 @@ from reportlab.pdfgen import canvas
 from api.models import BilletOption
 
 
-def generate(order):
+def generate(order, uid):
 
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')
@@ -30,7 +30,6 @@ def generate(order):
         # Draw things on the PDF. Here's where the PDF generation happens.
         # See the ReportLab documentation for the full list of functionality.
         price = 0
-        uid = Signer().sign(billet.id)
         product = billet.product
         participants = billet.participants.all()
         if product:
