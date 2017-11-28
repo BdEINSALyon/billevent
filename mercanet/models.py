@@ -57,6 +57,7 @@ class TransactionMercanet(models.Model):
     responseText = models.CharField(max_length=256, verbose_name=_('Status de la transaction'), blank=True)
     transactionReference = models.CharField(max_length=35 ,verbose_name=_('UUID (Référence MercaNET)'))
     amount = models.IntegerField(verbose_name=_("montant payé (centimes)"), primary_key=False, unique=False)
+    sealCheck = models.NullBooleanField(verbose_name=_('seal autoMercanet valide'), blank=True, null=True)
     maskedPan = models.CharField(verbose_name=_("numéro de CB masqué"), max_length=254, blank=True)
     transactionDateTime = models.DateTimeField(verbose_name=_("Date de la transaction"), blank=True, null=True)
     cardProductName = models.CharField(max_length=100, verbose_name=_("nom de la CB"), blank=True)

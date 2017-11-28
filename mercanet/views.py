@@ -145,29 +145,37 @@ class MercanetViewSet:
 def autoMercanet(request):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
     fichier = open('req.txt', 'a')
     r = request.POST
+    log(r)
     Seal = r.get("Seal")
     log(['seal mercanet : ', Seal])
     log("INCOMING MERCANET REQUEST")
     InterfaceVersion = r.get('InterfaceVersion')
-    testSeal = sealTransaction.loneSeal(r.get("Data"), os.environ["MERCANET_SECRET_KEY"])
-    log(['seal recalculé : ', testSeal])
+    DataMercanet = r.get("Data")
     data = ''.join(r.get("Data")).split(
         '|')  # reconstruit une liste des valeurs, qu'on sépare après pour les mettre dans un JSON
     cles, valeurs = [], []
     json_data = {}
-    for i in range(0, 78):
+    for i in range(0, len(data)):
         ligne = ''.join(data[i]).split('=')
         cles.append(ligne[0])
         valeurs.append(ligne[1])
         json_data[cles[i]] = valeurs[i]  # on ajoute chaque clé avec sa valeur dans un dictionnaire
     log("json parsé")
+    log(json.dumps(sealTransaction.sortDict(json_data)))
 
-    json_final = {  # on génére le JSON que DEVRAIT envoyer MercaNET au lieu de leur format texte de merde
-        "InterfaceVersion": InterfaceVersion,
-        "Seal": Seal,
-        "Data": json_data
-    }
+   #json_final = {  # on génére le JSON que DEVRAIT envoyer MercaNET au lieu de leur format texte de merde
+   #    "InterfaceVersion": InterfaceVersion,
+   #    "Seal": Seal,
+   #    "Data": json_data
+   #}
+
     #testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"], True)
+    testSeal = sealTransaction.sealFromList(ligne, os.environ["MERCANET_SECRET_KEY"])
+    testSeal = sealTransaction.loneSeal(''.join(DataMercanet), os.environ["MERCANET_SECRET_KEY"])
+    if testSeal == Seal:
+        json_data["sealCheck"] = True
+    else:
+        json_data["sealCheck"] = False
     json_data["responseText"] = rcList[
         json_data['responseCode']]  # on affiche joliment le status (MercaNET) de la commande
     log("status mercanet verbeux rajouté au JSON")
@@ -190,6 +198,4 @@ def autoMercanet(request):  # gère la réponse automatique de MercaNET, seul mo
         log("transaction updated")
     else:
         log("erreur lors de la serialisation")
-
-    log(json.dumps(json_final))
     return HttpResponse("merci pour les 0% de commission <3")
