@@ -1,3 +1,7 @@
+# Cette branche est uniquement destinée à faciliter les tests de l'API MercaNET
+en fait j'ai juste une URL qui fait directement un paiement sans rien demander
+
+
 # Billetterie
 ### Variables d'environnement :
 ``` 

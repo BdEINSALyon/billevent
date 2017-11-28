@@ -49,42 +49,31 @@ rcList = {
     "99": "Problème temporaire du serveur de paiement.",
 }
 
-
 class MercanetViewSet:
 
     @staticmethod
     @csrf_exempt
     def check(request, id):  # va falloir aller chercher dans les DB :(.
-        # transactionReference = int(1000 * math.exp(1 + float(id)))
-        transactionRequest = TransactionRequest.objects.get(id=id)
-        if transactionRequest.status < TransactionRequest.STATUSES['PAYING']:
-            return HttpResponseNotFound("NOT DONE YET")
-        transactionMercanet = transactionRequest.mercanet
-        # utilisation d'un hash pour l'id mercanet
+        transactionMercanet = TransactionMercanet.get
         rc = transactionMercanet.responseCode
         return HttpResponseRedirect(transactionRequest.callback)
 
     @staticmethod
-    def pay(request, id, token):
-        transactionRequest = TransactionRequest.objects.get(id=id, token=token)
-        amount = transactionRequest.amount
-
-        if transactionRequest.status > TransactionRequest.STATUSES['PAYING']:
-            return HttpResponseNotFound("ALREADY DONE")
-
+    @csrf_exempt
+    def pay(request):
+        idPrev = TransactionMercanet.objects.latest('id').id
+        id = int(idPrev) + 1
+        amount = 9 * id
         # transactionReference = int(1000*math.exp(1+float(id)))
-        transactionReference = genId(id)
-        mercanetToken = MercanetToken()
-        mercanetToken.transactionReference = transactionReference
-        mercanetToken.save()    #on enregistre les infos et ça crée un token de transaction pour le serveur
+        transactionReference = genId(str(id))
 
         response = HttpResponse()
         interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
         keyVersion = os.environ['MERCANET_KEY_VERSION']
         merchantId = os.environ['MERCANET_MERCHANT_ID']
-        normalReturnUrl = request.build_absolute_uri(urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
+        normalReturnUrl = "http://localhost/admin/mercanet/transactionmercanet/"+str(id)+'/'
         urlMercanet = os.environ['MERCANET_URL']
-        automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']+str(mercanetToken.serverToken) #oui je sais il faut faire pareil que au-dessus, mais si on le fait ça passera pas par le proxy Ultrahook
+        automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']
         donneesPourMercanet = {
             'currencyCode': 978,
             'interfaceVersion': interfaceVersion,
@@ -97,7 +86,7 @@ class MercanetViewSet:
             'automaticResponseUrl': automaticResponseUrl
         }
         seal = sealTransaction.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"], False)
-        seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"])
+        #seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"])
         donneesPourMercanet['seal'] = seal
 
         r = requests.post(urlMercanet, json=donneesPourMercanet,verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
@@ -125,8 +114,6 @@ class MercanetViewSet:
             }
 
             # Mise à jour de la request
-            transactionRequest.started = True
-            transactionRequest.save()
 
             # dataToSerialize = {}
             # dataToSerialize["amount"]= amount
@@ -142,9 +129,6 @@ class MercanetViewSet:
                 transaction = transaction_data.create(transaction_data.validated_data)
                 transaction.save()
 
-                transactionRequest.mercanet = transaction
-                transactionRequest.save()
-
                 log("transaction saved")
                 return TemplateResponse(request, 'mercanet_redirect.html', context)
             else:
@@ -158,7 +142,7 @@ class MercanetViewSet:
         return HttpResponse("usage : /pay/$id/$token")
 
 @csrf_exempt
-def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
+def autoMercanet(request):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
     fichier = open('req.txt', 'a')
     r = request.POST
     Seal = r.get("Seal")
@@ -184,22 +168,12 @@ def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, s
         "Data": json_data
     }
     #testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"], True)
-    transactionReference = json_data["transactionReference"]
-    mercanetToken = MercanetToken.objects.get(transactionReference=transactionReference)
-    if mercanetToken.serverToken == head:
-        log("Mercanet est correctement authentifié")
-    elif MercanetToken.objects.filter(transactionReference=transactionReference)[0] == head or MercanetToken.objects.filter(transactionReference=transactionReference)[1] == head:
-        log("entrées dupliquées !") # ça devrait pas arriver si on repart de 0 sur la BDD Mercanet
-    else:
-        log("DANGER : MiTM attack ? Mercanet n'a pas répondu à la bonne adresse !!!!")
-        exit(1)
-    log(head)
-    log(mercanetToken.serverToken)
     json_data["responseText"] = rcList[
         json_data['responseCode']]  # on affiche joliment le status (MercaNET) de la commande
     log("status mercanet verbeux rajouté au JSON")
     # json_data.pop("transactionReference")
     # json_data.pop("amount")
+    transactionReference = json_data['transactionReference']
     transaction = TransactionMercanet.objects.get(transactionReference=transactionReference)
     log('objet transaction récupéré')
     transaction_data = TransactionMercanetSerializer(transaction, data=json_data, partial=True)
