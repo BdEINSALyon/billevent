@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
 from django.core.signing import TimestampSigner
 from django.db import transaction
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
@@ -16,7 +17,8 @@ from rest_framework_jwt.settings import api_settings
 
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
-from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer
+from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer, \
+    AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer
 from mercanet.models import TransactionRequest
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
@@ -55,7 +57,8 @@ class EventsViewSet(viewsets.ModelViewSet):
         client = request.user.client
 
         # On récupère la commande en cours si il en existe une, sinon on la crée
-        order = client.orders.filter(event=event, status__lt=Order.STATUS_PAYMENT).first() or \
+        order = client.orders.filter(event=event, status__lt=Order.STATUS_PAYMENT,
+                                     created_at__gt=timezone.now() - timedelta(minutes=20)).first() or \
                 Order(event=event, client=client)
         order.save()
 
@@ -86,7 +89,7 @@ class EventsViewSet(viewsets.ModelViewSet):
             order.destroy_all()
             return Response("NIQUE TA MERE ESSAYE PAS DE GRUGER", status=400)
 
-        order.status = order.STATUS_SELECT_OPTIONS
+        order.status = order.STATUS_SELECT_PARTICIPANT
         order.save()
 
         return Response(OrderSerializer(order).data)
@@ -125,28 +128,6 @@ class EventsViewSet(viewsets.ModelViewSet):
 
         return Response(OrderSerializer(order).data)
 
-    @detail_route(methods=['post'])
-    def participants(self, request, pk=None):
-        event = Event.for_user(request.user).get(id=pk)
-        client = request.user.client
-        order = client.orders.get(event=event, status__lt=Order.STATUS_PAYMENT)
-
-        # Stockera les participants créés
-        reponse = []
-        # Pour chaque participant dans le JSON
-        for participant_data in request.data:
-            # On crée le sérializer et on regarde si il est valide, comme d'hab
-            participant_ser = ParticipantSerializer(data=participant_data)
-            if participant_ser.is_valid():
-                participant = participant_ser.create(participant_ser.validated_data)
-                participant.save()
-                # On ajoute le JSON du participant à la réponse
-                reponse.append(ParticipantSerializer(participant).data)
-            else:
-                return Response(participant_ser.errors)
-
-        return Response(reponse)
-
 
 """
 class OptionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -161,6 +142,111 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Order.objects.filter(client__user=self.request.user)
+
+    @detail_route(methods=['post'])
+    def participants(self, request, pk):
+        order = self.get_object()
+
+        # Pour chaque participant dans le JSON
+        for participant_data in request.data:
+            # On crée le sérializer et on regarde si il est valide, comme d'hab
+            participant_ser = ParticipantSerializer(data=participant_data)
+            if participant_ser.is_valid():
+                participant = participant_ser.create(participant_ser.validated_data)
+                if participant.billet.product.seats >= participant.billet.participants.count():
+                    participant.save()
+                else:
+                    participant.delete()
+            else:
+                return Response(participant_ser.errors)
+
+        order.state = Order.STATUS_SELECT_QUESTION
+        order.save()
+
+        return Response(OrderSerializer(self.get_object()).data)
+
+    @detail_route(methods=['post'])
+    def answers(self, request, pk):
+        order = self.get_object()
+
+        order.answers.all().delete()
+
+        # Pour chaque participant dans le JSON
+        for answer_data in request.data:
+            # On crée le sérializer et on regarde si il est valide, comme d'hab
+            answer_data['order'] = pk
+            answer_serializer = AnswerSerializer(data=answer_data)
+            if answer_serializer.is_valid():
+                answer = answer_serializer.create(answer_serializer.validated_data)
+                answer.save()
+            else:
+                return Response(answer_serializer.errors)
+
+        order.status = Order.STATUS_SELECT_OPTIONS
+        order.save()
+
+        return Response(OrderSerializer(order).data)
+
+    @detail_route(methods=['post'])
+    def billet_options(self, request, pk):
+        order = self.get_object()
+
+        for billet in order.billets.all():
+            billet.billet_options.all().delete()
+
+        # Pour chaque participant dans le JSON
+        for bo_data in request.data:
+            # On crée le sérializer et on regarde si il est valide, comme d'hab
+            bo_data['order'] = pk
+            if 'billet' not in bo_data or bo_data['billet'] is None:
+                billet, _ = order.billets.get_or_create(product=None)
+                bo_data['billet'] = billet.id
+            bo_serializer = BilletOptionInputSerializer(data=bo_data)
+            if bo_serializer.is_valid():
+                bo = bo_serializer.create(bo_serializer.validated_data)
+                bo.save()
+            else:
+                return Response(bo_serializer.errors)
+
+        if order.is_valid():
+            order.status = Order.STATUS_REVIEW_ORDER
+            order.save()
+            return Response(OrderSerializer(order).data)
+        else:
+            for billet in order.billets.all():
+                billet.billet_options.all().delete()
+
+            return Response({"error": "Les options dépassent les quotas"}, status=400)
+
+    @detail_route(methods=['post'])
+    def cancel(self, request, pk):
+        order = self.get_object()
+        order.status = Order.STATUS_CANCELED
+        order.save()
+        if order.delete():
+            return Response({'success': True})
+        else:
+            return Response({'success': False})
+
+    @detail_route(methods=['get'])
+    def final(self, request, pk):
+        id = pk
+        order = Order.objects.get(id=id, client__user=request.user)
+
+        if order.status <= 5:
+            status = "waiting"
+        elif order.status <= 6:
+            status = "validated"
+        else:
+            status = "rejected"
+
+        tickets = request.build_absolute_uri(
+            urls.reverse('ticket-print', args=[TimestampSigner().sign(id)]))
+
+        return Response({
+            'status': status,
+            'url': tickets
+        })
 
     @detail_route(methods=['post'])
     def pay(self, request, pk=None):
