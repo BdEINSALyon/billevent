@@ -1,0 +1,29 @@
+version: '2'
+
+services:
+
+  app:
+    build: .
+    container_name: resa
+    environment:
+      - DJANGO_ENV=prod
+      - HOST=0.0.0.0
+      - DEBUG=False
+      - SSL=False
+      - DJANGO_LOCALE=fr-fr
+      - DJANGO_TIMEZONE=Europe/Paris
+      - DATABASE_URL=postgres://postgresql:postgresql@db:5432/billevent
+
+    depends_on:
+      - db
+    ports:
+      - "42000:8000"
+    volumes:
+      - ./staticfiles:/app/staticfiles
+
+  db:
+    image: postgres:latest
+    container_name: postgres-resa
+    environment:
+      - POSTGRES_USER=postgresql
+      - POSTGRES_DB=billevent

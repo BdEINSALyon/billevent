@@ -61,11 +61,10 @@ def generate(order):
         d.add(qr_code)
         renderPDF.draw(d, p, 20 * mm + 0.5 * ba_width - 0.5 * qr_width, A4[1] - 20 * mm - qr_y)
         options_number = 0
-        i = -20
+        i = -10
         for participant in participants:
-            i += 20
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{}".format(participant.last_name))
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{}".format(participant.first_name))
+            i += 10
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{} {}".format(participant.last_name, participant.first_name))
             billet_options = BilletOption.objects.filter(participant = participant)
             for billet_option in billet_options:
                 options_number += 1
@@ -74,7 +73,7 @@ def generate(order):
                 option_name = option.name
                 amount = billet_option.amount
                 price += option.price_ttc * amount
-                p.drawString((20 + 10) * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
+                p.drawString((20 + 10) * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
         billet_options = BilletOption.objects.filter(billet=billet).exclude(participant__isnull=False)
         for billet_option in billet_options:
             options_number += 1
@@ -86,7 +85,7 @@ def generate(order):
             p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
         if product:
             i += 10
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "=> {} : {} €".format(product.name, product.price_ttc))
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "=> {} : {} €".format(product.name, product.price_ttc))
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Prix TTC : {} €".format(price))
         p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Date d'émission : {}".format(datetime.now().date()))
         p.setFont("Helvetica-Bold", 25)
