@@ -29,7 +29,14 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         read_only = True
         model = models.Question
-        fields = ('id', 'question', 'help_text', 'question_type', 'required', 'target')
+        fields = ('id', 'question', 'help_text', 'data', 'question_type', 'required', 'target')
+
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        read_only = True
+        model = models.Answer
+        fields = ('id', 'participant', 'question', 'value', 'order', 'billet')
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -37,7 +44,7 @@ class OptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Option
-        fields = ('id', 'name',
+        fields = ('id', 'name', 'type',
                   'price_ht', 'price_ttc',
                   'rules', 'seats', 'target',
                   'event', 'how_many_left')
@@ -46,7 +53,7 @@ class OptionSerializer(serializers.ModelSerializer):
 class ParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Participant
-        fields = "__all__"
+        fields = ('id', 'first_name', 'last_name', 'phone', 'email', 'billet')
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -97,42 +104,54 @@ class InvitationSerializer(serializers.ModelSerializer):
         depth = 3
 
 
-class BilletSerializer(serializers.ModelSerializer):
-    product = PrimaryKeyRelatedField(many=False, queryset=Product.objects.all())
-    options = PrimaryKeyRelatedField(many=True, required=False, queryset=Option.objects.all())
-
-    class Meta:
-        model = models.Billet
-        fields = ('id', 'product', 'options')
-        depth = 2
-
-
 class BilletOptionSerializer(serializers.ModelSerializer):
     option = OptionSerializer()
 
     class Meta:
         model = models.BilletOption
         fields = ('id', 'option', 'participant', 'amount', 'billet')
+
+
+class BilletOptionInputSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.BilletOption
+        fields = ('id', 'option', 'participant', 'amount', 'billet')
+
+
+class BilletSerializer(serializers.ModelSerializer):
+    product = PrimaryKeyRelatedField(many=False, queryset=Product.objects.all())
+    options = PrimaryKeyRelatedField(many=True, read_only=True, required=False)
+    participants = ParticipantSerializer(many=True, required=False)
+    billet_options = BilletOptionSerializer(many=True, required=False)
+
+    class Meta:
+        model = models.Billet
+        fields = ('id', 'product', 'options', 'billet_options', 'participants')
         depth = 2
 
 
 class BilletForOrderSerializer(serializers.ModelSerializer):
     product = ProductSerializer(many=False)
     billet_options = BilletOptionSerializer(many=True, required=False)
+    options = PrimaryKeyRelatedField(many=True, read_only=True, required=False)
+    participants = ParticipantSerializer(many=True, required=False)
 
     class Meta:
         model = models.Billet
-        fields = ('id', 'product', 'billet_options')
+        fields = ('id', 'product', 'options', 'billet_options', 'participants')
         depth = 2
 
 
 class OrderSerializer(serializers.ModelSerializer):
     event = EventSerializer(read_only=True)
     billets = BilletForOrderSerializer(many=True, read_only=True)
+    answers = AnswerSerializer(many=True, read_only=True)
+    client = ClientSerializer(read_only=True)
 
     class Meta:
         model = models.Order
-        fields = ('id', 'client', 'event', 'billets', 'status')
+        fields = ('id', 'client', 'event', 'billets', 'status', 'answers')
         depth = 2
 
 

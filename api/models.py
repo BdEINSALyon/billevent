@@ -157,6 +157,7 @@ class Option(Pricing):
 
     products = models.ManyToManyField(Product, related_name='options')
     target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
+    type = models.CharField(max_length=30, choices=(('single', _('Unique')), ('multiple', _('Plusieurs'))))
 
 
 def generate_token():
@@ -285,8 +286,8 @@ class PricingRule(models.Model):
 class Participant(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    email = models.CharField(max_length=255)
-    phone = models.CharField(max_length=255)
+    email = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=255, blank=True)
     billet = models.ForeignKey(Billet, related_name='participants')
 
     def __str__(self):
@@ -306,13 +307,23 @@ class Question(models.Model):
     )
 
     question = models.CharField(max_length=255)
-    help_text = models.TextField()
-    question_type = models.IntegerField(verbose_name=_('type de question'))
+    help_text = models.TextField(blank=True)
+    data = models.TextField(blank=True, null=True)
+    question_type = models.IntegerField(verbose_name=_('type de question'), choices=QUESTIONS_TYPES)
     required = models.BooleanField(default=False)
     target = models.CharField(max_length=30, choices=TARGETS, default='Participant')
 
     def __str__(self):
         return self.question
+
+
+class Answer(models.Model):
+
+    order = models.ForeignKey('Order', related_name='answers')
+    question = models.ForeignKey(Question)
+    participant = models.ForeignKey(Participant, null=True, blank=True)
+    billet = models.ForeignKey(Billet, null=True, blank=True)
+    value = models.TextField(blank=True, null=True)
 
 
 class Response(models.Model):
@@ -372,11 +383,13 @@ class Order(models.Model):
     STATUS_NOT_READY = 0
     STATUS_SELECT_PRODUCT = 1
     STATUS_SELECT_PARTICIPANT = 2
-    STATUS_SELECT_OPTIONS = 3
-    STATUS_REVIEW_ORDER = 4
-    STATUS_PAYMENT = 5
-    STATUS_VALIDATED = 6
-    STATUS_REJECTED = 7
+    STATUS_SELECT_QUESTION = 3
+    STATUS_SELECT_OPTIONS = 4
+    STATUS_REVIEW_ORDER = 5
+    STATUS_PAYMENT = 6
+    STATUS_VALIDATED = 7
+    STATUS_REJECTED = 8
+    STATUS_CANCELED = 9
 
     STATUSES = (
         (STATUS_NOT_READY, _('Pas initialisée')),

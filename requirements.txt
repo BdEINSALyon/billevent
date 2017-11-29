@@ -12,6 +12,7 @@ django-webpack-loader==0.5.0
 djangorestframework==3.7.0
 djangorestframework-jwt==1.11.0
 drf-nested-routers==0.90.0
+gunicorn==19.7.1
 Faker==0.8.6
 idna==2.6
 itypes==1.1.0
