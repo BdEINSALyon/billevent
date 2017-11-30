@@ -6,7 +6,7 @@ from ticketgenerator import generator
 
 
 def generate_ticket(request, id):
-    real_id = TimestampSigner().unsign(id, max_age=60)
+    real_id = TimestampSigner().unsign(id)
     try:
         order = Order.objects.get(id=real_id)
     except Order.DoesNotExist:
