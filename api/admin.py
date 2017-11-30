@@ -4,6 +4,7 @@ from . import models
 
 @admin.register(models.Event,
                 models.Organizer,
+                models.Membership,
                 models.PricingRule,
                 models.Product, models.Option,
                 models.Billet,

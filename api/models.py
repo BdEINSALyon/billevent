@@ -18,6 +18,25 @@ TARGETS = (
 )
 
 
+class Membership(models.Model):
+    LEVEL_ADMIN = 0
+    LEVEL_MANAGER = 100
+    LEVEL_VIEWER = 1000
+    LEVELS = (
+        (LEVEL_ADMIN, _('Administrateur')),
+        (LEVEL_MANAGER, _('Gestionnaire')),
+        (LEVEL_VIEWER, _('Lecture seul'))
+    )
+
+    user = models.OneToOneField(User, on_delete=models.PROTECT, related_name='membership')
+    organization = models.ForeignKey('Organizer', on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_created=True)
+    permission_level = models.IntegerField(choices=LEVELS)
+
+    def valid(self, level):
+        return level >= self.permission_level
+
+
 class Organizer(models.Model):
     class Meta:
         verbose_name = _('Organisateur')
@@ -26,6 +45,7 @@ class Organizer(models.Model):
     phone = models.CharField(max_length=15, blank=True)
     address = models.CharField(max_length=250, blank=True)
     email = models.EmailField()
+    users = models.ManyToManyField(User, through=Membership, related_name='organizations')
 
     def __str__(self):
         return self.name
