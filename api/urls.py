@@ -21,9 +21,11 @@ urlpatterns = [
     url(r'^authenticate/invitation$', views.InvitationAuthentication.as_view()),
     url(r'^authenticate$', obtain_jwt_token),
     url(r'^authenticate/refresh$', refresh_jwt_token),
+    url(r'^authenticate/logout$', views.LogoutViews.as_view()),
     url(r'^', include(router.urls)),
     url(r'^admin/', include(admin_router.urls, namespace='api_admin')),
     url(r'^rules', views.RulesViews.as_view()),
+    url(r'^me', views.CurrentUserViews.as_view()),
     url(r'^orders/(?P<id>[0-9]+)/final', views.OrderFinalViews.as_view()),
     url(r'^', include('rest_framework.urls', namespace='rest_framework')),
 

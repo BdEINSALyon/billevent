@@ -18,7 +18,7 @@ from rest_framework_jwt.settings import api_settings
 from api import permissions
 from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer, \
-    AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer
+    AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer, UserSerializer
 from mercanet.models import TransactionRequest
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
@@ -409,6 +409,24 @@ class OrderFinalViews(APIView):
             'status': status,
             'url': tickets
         })
+
+
+@permission_classes([])
+class CurrentUserViews(APIView):
+    def get(self, request):
+        if not request.user:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(UserSerializer(request.user).data)
+
+
+@permission_classes([])
+class LogoutViews(APIView):
+    def delete(self, request):
+        if not request.user:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(UserSerializer(request.user).data)
 
 
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER

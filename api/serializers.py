@@ -6,10 +6,10 @@ from api import models
 from api.models import Billet, Product, Option
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('url', 'username', 'email', 'groups')
+        fields = ('username', 'email')
 
 
 class GroupSerializer(serializers.HyperlinkedModelSerializer):
