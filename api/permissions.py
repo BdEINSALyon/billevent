@@ -26,3 +26,13 @@ class IsEventManager(BasePermission):
             return request.user and (request.user.is_staff or request.user.membership)
         except Membership.DoesNotExist:
             return False
+
+
+class InvitationPermission(IsEventManager):
+
+    def has_object_permission(self, request, view, invitation):
+        try:
+            membership = request.user.membership
+            return invitation.event in membership.events.all() or invitation.event.organizer == membership.organizer
+        except Membership.DoesNotExist:
+            return False

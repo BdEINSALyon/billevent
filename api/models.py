@@ -29,8 +29,9 @@ class Membership(models.Model):
     )
 
     user = models.OneToOneField(User, on_delete=models.PROTECT, related_name='membership')
-    organization = models.ForeignKey('Organizer', on_delete=models.PROTECT)
-    created_at = models.DateTimeField(auto_created=True)
+    organization = models.ForeignKey('Organizer', on_delete=models.PROTECT, null=True, blank=True)
+    events = models.ManyToManyField('Event', blank=True)
+    created_at = models.DateTimeField(auto_created=True, blank=True)
     permission_level = models.IntegerField(choices=LEVELS)
 
     def valid(self, level):

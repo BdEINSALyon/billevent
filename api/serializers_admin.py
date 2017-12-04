@@ -86,12 +86,11 @@ class ClientSerializer(serializers.ModelSerializer):
 
 
 class InvitationSerializer(serializers.ModelSerializer):
-    event = EventSerializer()
-    client = ClientSerializer()
+    event = EventSerializer(read_only=True)
 
     class Meta:
         model = models.Invitation
-        fields = ('id', 'client', 'event', 'token')
+        fields = ('id', 'first_name', 'last_name', 'email', 'event', 'token', 'seats', 'bought_seats')
         depth = 3
 
 
