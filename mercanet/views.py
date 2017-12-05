@@ -1,6 +1,5 @@
 import hashlib
 import json
-import os
 
 import datetime
 import requests  # bon, urllib est pas content, je change, merci Gab
@@ -12,10 +11,12 @@ from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
 
 #from mercanet import calculateSeal
+from billetterie.settings import BILLEVENT
 from mercanet import sealTransaction
 from mercanet.models import TransactionMercanet, TransactionRequest, MercanetToken
 from mercanet.serializers import TransactionMercanetSerializer
 
+CONFIG = BILLEVENT['MERCANET']
 
 def log(text):
     f = open('mercanet.log', 'a')
@@ -79,12 +80,12 @@ class MercanetViewSet:
         mercanetToken.save()    #on enregistre les infos et ça crée un token de transaction pour le serveur
 
         response = HttpResponse()
-        interfaceVersion = os.environ['MERCANET_INTERFACE_VERSION']
-        keyVersion = os.environ['MERCANET_KEY_VERSION']
-        merchantId = os.environ['MERCANET_MERCHANT_ID']
+        interfaceVersion = CONFIG['INTERFACE_VERSION']
+        keyVersion = CONFIG['KEY_VERSION']
+        merchantId = CONFIG['MERCHANT_ID']
         normalReturnUrl = request.build_absolute_uri(urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
-        urlMercanet = os.environ['MERCANET_URL']
-        automaticResponseUrl = os.environ['MERCANET_REPONSE_AUTO_URL']+str(mercanetToken.serverToken) #oui je sais il faut faire pareil que au-dessus, mais si on le fait ça passera pas par le proxy Ultrahook
+        urlMercanet = CONFIG['URL']
+        automaticResponseUrl = CONFIG['REPONSE_AUTO_URL']+str(mercanetToken.serverToken)
         donneesPourMercanet = {
             'currencyCode': 978,
             'interfaceVersion': interfaceVersion,
@@ -96,8 +97,8 @@ class MercanetViewSet:
             'transactionReference': transactionReference,
             'automaticResponseUrl': automaticResponseUrl
         }
-        seal = sealTransaction.sealFromJson(donneesPourMercanet, os.environ["MERCANET_SECRET_KEY"], False)
-        seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], os.environ["MERCANET_SECRET_KEY"])
+        seal = sealTransaction.sealFromJson(donneesPourMercanet, CONFIG["SECRET_KEY"], False)
+        seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], CONFIG["SECRET_KEY"])
         donneesPourMercanet['seal'] = seal
 
         r = requests.post(urlMercanet, json=donneesPourMercanet,verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
@@ -165,7 +166,7 @@ def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, s
     log(['seal mercanet : ', Seal])
     log("INCOMING MERCANET REQUEST")
     InterfaceVersion = r.get('InterfaceVersion')
-    testSeal = sealTransaction.loneSeal(r.get("Data"), os.environ["MERCANET_SECRET_KEY"])
+    testSeal = sealTransaction.loneSeal(r.get("Data"), CONFIG["SECRET_KEY"])
     log(['seal recalculé : ', testSeal])
     data = ''.join(r.get("Data")).split(
         '|')  # reconstruit une liste des valeurs, qu'on sépare après pour les mettre dans un JSON
@@ -183,7 +184,6 @@ def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, s
         "Seal": Seal,
         "Data": json_data
     }
-    #testSeal = sealTransaction.sealFromJson(json_data, os.environ["MERCANET_SECRET_KEY"], True)
     transactionReference = json_data["transactionReference"]
     mercanetToken = MercanetToken.objects.get(transactionReference=transactionReference)
     if mercanetToken.serverToken == head:

@@ -169,16 +169,13 @@ STATICFILES_DIRS = [
 ]
 
 BILLEVENT = {
-    'FRONTEND_URL': os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+    'FRONTEND_URL': os.environ.get('FRONTEND_URL', 'http://localhost:4200'),
+    'MERCANET': {
+        'INTERFACE_VERSION': os.environ.get('MERCANET_INTERFACE_VERSION', 'IR_WS_2.18'),
+        'KEY_VERSION': os.environ.get('MERCANET_KEY_VERSION', '1'),
+        'MERCHANT_ID': os.environ.get('MERCANET_MERCHANT_ID', '211000021310001'),
+        'URL': os.environ.get('MERCANET_URL', 'https://payment-webinit-mercanet.test.sips-atos.com/rs-services/v2/paymentInit'),
+        'SECRET_KEY': os.environ.get('MERCANET_SECRET_KEY', 'S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o'),
+        'REPONSE_AUTO_URL': os.environ.get('MERCANET_REPONSE_AUTO_URL', 'http://mercanet.pvienne.ultrahook.com/pay/auto/'),
+    }
 }
-
-import os
-#variables d'environnement pour la communication avec la BNP
-os.environ['MERCANET_INTERFACE_VERSION'] = "IR_WS_2.18"
-os.environ['MERCANET_KEY_VERSION'] = "1"
-os.environ['MERCANET_MERCHANT_ID'] = "211000021310001"
-os.environ['NORMAL_RETURN_URL'] = 'http://jean.netlib.re'
-#os.environ['MERCANET_URL'] = "https://payment-webinit.simu.mercanet.bnpparibas.net/paymentInit"
-os.environ['MERCANET_URL'] = "https://payment-webinit-mercanet.test.sips-atos.com/rs-services/v2/paymentInit" #à garder, MercaNET se sont trompés dans leur doc
-os.environ['MERCANET_SECRET_KEY'] = "S9i8qClCnb2CZU3y3Vn0toIOgz3z_aBi79akR30vM9o"
-os.environ['MERCANET_REPONSE_AUTO_URL'] = "http://mercanet.pvienne.ultrahook.com/pay/auto/"
