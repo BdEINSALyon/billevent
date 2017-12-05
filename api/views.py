@@ -395,9 +395,9 @@ class OrderFinalViews(APIView):
     def get(self, request, id):
         order = Order.objects.get(id=id, client__user=request.user)
 
-        if order.status <= 5:
+        if order.status <= order.STATUS_PAYMENT:
             status = "waiting"
-        elif order.status <= 6:
+        elif order.status <= order.STATUS_VALIDATED:
             status = "validated"
         else:
             status = "rejected"
