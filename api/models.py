@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 
+from api.email import InvitationEmail
 from mercanet.models import TransactionRequest, TransactionMercanet
 
 TARGETS = (
@@ -190,8 +191,8 @@ class Invitation(models.Model):
     email = models.EmailField()
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
-    link_sent = models.BooleanField(blank=True)
-    reason = models.TextField(blank=True)
+    link_sent = models.BooleanField(blank=True, default=False)
+    reason = models.TextField(blank=True, default='')
     event = models.ForeignKey(Event, related_name='invitations')
     client = models.ForeignKey('Client', related_name='invitations', null=True, blank=True)
     token = models.CharField(max_length=32, default=generate_token)
@@ -207,6 +208,10 @@ class Invitation(models.Model):
             count += pricing.reserved_seats(billets)
         return count
 
+    def send_email(self):
+        email = InvitationEmail(self, to=(self.email,))
+        self.link_sent = email.send(True) > 0
+
 
 @receiver(pre_save, sender=Invitation)
 def before_save_invitation_map_client(sender, instance, raw, **kwargs):
@@ -215,6 +220,8 @@ def before_save_invitation_map_client(sender, instance, raw, **kwargs):
             'first_name': instance.first_name,
             'last_name': instance.last_name
         })
+    if not instance.link_sent:
+        instance.send_email()
 
 
 class BilletOption(models.Model):

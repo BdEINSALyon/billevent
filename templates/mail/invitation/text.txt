@@ -1,0 +1,7 @@
+Bonjour {{invitation.first_name}},
+
+Vous avez été convié(e) à participer à l'évènement « {{invitation.event.name}} ».
+L'accès à la billetterie se fait au moyen de ce lien :
+   {{ link }}
+
+L'équipe {{invitation.event.name}}

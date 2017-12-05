@@ -1,0 +1,12 @@
+<p>Bonjour {{ invitation.first_name }},</p>
+<p>
+    Vous avez été convié(e) à participer à l'évènement « {{ invitation.event.name }} ».
+    L'accès à la billetterie se fait au moyen de ce lien :
+</p>
+<p style="text-align: center">
+    <a href="{{ link }}">{{ link }}</a>
+</p>
+<br>
+<p>
+    L'équipe {{ invitation.event.name }}
+</p>

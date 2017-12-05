@@ -31,3 +31,10 @@ class InvitationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Invitation.objects.filter(event__organizer__membership__user=self.request.user) | \
                Invitation.objects.filter(event__membership__user=self.request.user)
+
+    def get_serializer(self, *args, **kwargs):
+        serializer = super().get_serializer(*args, **kwargs)
+        if type(serializer) is serializers.InvitationSerializer:
+            serializer.fields['event_id'].queryset = (Event.objects.filter(organizer__membership__user=self.request.user) |
+                                                      Event.objects.filter(membership__user=self.request.user))
+        return serializer

@@ -87,11 +87,21 @@ class ClientSerializer(serializers.ModelSerializer):
 
 class InvitationSerializer(serializers.ModelSerializer):
     event = EventSerializer(read_only=True)
+    event_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.Event.objects.all(), source='event', write_only=True)
 
     class Meta:
         model = models.Invitation
-        fields = ('id', 'first_name', 'last_name', 'email', 'event', 'token', 'seats', 'bought_seats')
+        fields = ('id', 'first_name', 'last_name', 'email', 'event', 'event_id', 'token', 'seats', 'bought_seats')
         depth = 3
+
+    def create(self, validated_data):
+        invitation, created = models.Invitation.objects.get_or_create(email=validated_data['email'],
+                                                                      event=validated_data['event'],
+                                                                      defaults=validated_data)
+        if not created:
+            self.update(invitation, validated_data)
+        return invitation
 
 
 class BilletOptionSerializer(serializers.ModelSerializer):
@@ -103,7 +113,6 @@ class BilletOptionSerializer(serializers.ModelSerializer):
 
 
 class BilletOptionInputSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = models.BilletOption
         fields = ('id', 'option', 'participant', 'amount', 'billet')

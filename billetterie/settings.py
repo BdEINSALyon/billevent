@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "anymail",
     'rest_framework',
     'rest_framework_swagger',
     'corsheaders',
@@ -116,6 +117,15 @@ DATABASES = {
     'default': dj_database_url.config(default='sqlite:///'+os.path.join(BASE_DIR, 'db.sqlite3'), conn_max_age=600)
 }
 
+ANYMAIL = {
+    # (exact settings here depend on your ESP...)
+    "MAILGUN_API_KEY": os.environ.get('MAILGUN_API_KEY', ''),
+    "MAILGUN_SENDER_DOMAIN": os.environ.get('MAILGUN_DOMAIN', 'demo'),  # your Mailgun domain, if needed
+}
+
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'billetterie@gala.bde-insa-lyon.fr')
+
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
 
@@ -157,6 +167,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static")
 ]
+
+BILLEVENT = {
+    'FRONTEND_URL': os.environ.get('FRONTEND_URL', 'http://localhost:4200')
+}
+
 import os
 #variables d'environnement pour la communication avec la BNP
 os.environ['MERCANET_INTERFACE_VERSION'] = "IR_WS_2.18"
