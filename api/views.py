@@ -233,11 +233,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         id = pk
         order = Order.objects.get(id=id, client__user=request.user)
 
-        if order.status <= 5:
-            status = "waiting"
-        elif order.status <= 6:
+        status = "waiting"
+        if order.status == Order.STATUS_VALIDATED:
             status = "validated"
-        else:
+        elif order.status >= Order.STATUS_REJECTED:
             status = "rejected"
 
         tickets = request.build_absolute_uri(
@@ -388,27 +387,6 @@ class RulesViews(APIView):
             return Response({'value': invitation.bought_seats, 'limit': invitation.seats})
         else:
             return Response(data)
-
-
-@permission_classes([])
-class OrderFinalViews(APIView):
-    def get(self, request, id):
-        order = Order.objects.get(id=id, client__user=request.user)
-
-        if order.status <= order.STATUS_PAYMENT:
-            status = "waiting"
-        elif order.status <= order.STATUS_VALIDATED:
-            status = "validated"
-        else:
-            status = "rejected"
-
-        tickets = request.build_absolute_uri(
-            urls.reverse('ticket-print', args=[TimestampSigner().sign(id)]))
-
-        return Response({
-            'status': status,
-            'url': tickets
-        })
 
 
 @permission_classes([])

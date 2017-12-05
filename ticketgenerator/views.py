@@ -11,7 +11,7 @@ def generate_ticket(request, id):
         order = Order.objects.get(id=real_id)
     except Order.DoesNotExist:
         raise Http404("Does not exist")
-    if order.status != 6:
+    if order.status != Order.STATUS_VALIDATED:
         raise Http404("Does not exist")
     response = generator.generate(order)
     return response

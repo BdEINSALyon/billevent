@@ -21,11 +21,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', '^&2upg8b26db6l#3o&2jsfta2@mkek^pan^a-h29v1gi&l%57!')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('ENV', 'development') != 'production'
 
-ALLOWED_HOSTS = os.environ.get('HOST', 'localhost').split(';')
+ALLOWED_HOSTS = os.environ.get('HOST', 'localhost').split(',')
 
 CORS_ORIGIN_WHITELIST = [
     'billetterie.bde-insa-lyon.fr',

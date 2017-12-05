@@ -27,7 +27,6 @@ urlpatterns = [
     url(r'^admin/', include(admin_router.urls, namespace='api_admin')),
     url(r'^rules', views.RulesViews.as_view()),
     url(r'^me', views.CurrentUserViews.as_view()),
-    url(r'^orders/(?P<id>[0-9]+)/final', views.OrderFinalViews.as_view()),
     url(r'^', include('rest_framework.urls', namespace='rest_framework')),
 
 ]
