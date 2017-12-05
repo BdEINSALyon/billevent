@@ -23,25 +23,25 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ.get('SECRET_KEY', '^&2upg8b26db6l#3o&2jsfta2@mkek^pan^a-h29v1gi&l%57!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('ENV', 'development') != 'production'
 
 ALLOWED_HOSTS = os.environ.get('HOST', 'localhost').split(';')
 
-CORS_ORIGIN_WHITELIST = (
+CORS_ORIGIN_WHITELIST = [
     'billetterie.bde-insa-lyon.fr',
     'localhost:4200',
     '127.0.0.1:4200',
     '127.0.0.1:8000',
     'localhost:8000'
-)
+] + os.environ.get('DOMAINS', '').split(',')
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = (
+CSRF_TRUSTED_ORIGINS = [
     'billetterie.bde-insa-lyon.fr',
     'localhost:4200',
     '127.0.0.1:4200',
-)
+] + os.environ.get('DOMAINS', '').split(',')
 
 # Application definition
 
