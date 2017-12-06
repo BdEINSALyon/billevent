@@ -63,7 +63,7 @@ class EventsViewSet(viewsets.ModelViewSet):
         # On récupère la commande en cours si il en existe une, sinon on la crée
         order = client.orders.filter(event=event, status__lt=Order.STATUS_PAYMENT,
                                      created_at__gt=timezone.now() - timedelta(minutes=20)).first() or \
-                Order(event=event, client=client)
+                Order(event=event, client=client, status=Order.STATUS_SELECT_PRODUCT)
         order.save()
 
         if request.method == 'GET':
