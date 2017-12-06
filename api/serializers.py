@@ -100,7 +100,7 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Invitation
-        fields = ('id', 'client', 'event', 'token')
+        fields = ('id', 'client', 'event', 'token', 'bought_seats', 'seats')
         depth = 3
 
 

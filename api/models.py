@@ -144,20 +144,18 @@ class Pricing(models.Model):
 
         :return: Le nombre de produit restant ou -1 si il en reste une infinité/quantitée indé
         """
-        try:
-            billets_max = type(self).objects.get(id=self.id).rules.find(type=PricingRule.TYPE_T).first().value
-            nombre_billet = 0
+        rules = self.rules.filter(type=PricingRule.TYPE_T)
+        if len(rules) <= 0:
+            return -1
+        seats = [rule.value - Pricing.reserved_seats_for(rule.pricings) for rule in rules]
+        return min(seats)
 
-            if type(self) is Product:
-                nombre_billet = Billet.objects.filter(product=self.id).count()
-            if type(self) is Option:
-                nombre_billet = Billet.objects.filter(options=self.id).count()
-        except PricingRule.DoesNotExist:
-            return 9999
-        except Billet.DoesNotExist:
-            return 9999
-        else:
-            return billets_max - nombre_billet
+    @staticmethod
+    def reserved_seats_for(pricings, billets=None):
+        count = 0
+        for pricing in pricings:
+            count += pricing.reserved_seats(billets)
+        return count
 
     def __str__(self):
         return self.name

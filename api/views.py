@@ -44,6 +44,10 @@ class EventsViewSet(viewsets.ModelViewSet):
         event = self.get_object()
         return Response(CategorieSerializer(Categorie.objects.filter(event=event).all(), many=True).data)
 
+    @detail_route(methods=['get'])
+    def invitation(self, request, pk):
+        return Response(InvitationSerializer(request.user.client.invitations.get(event_id=pk)).data)
+
     @detail_route(methods=['get', 'post'])
     def order(self, request, pk=None):
         """Permet de créer une commande.
