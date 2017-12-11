@@ -10,13 +10,14 @@ from django.http.response import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
 
-#from mercanet import calculateSeal
+# from mercanet import calculateSeal
 from billetterie.settings import BILLEVENT
 from mercanet import sealTransaction
 from mercanet.models import TransactionMercanet, TransactionRequest, MercanetToken
 from mercanet.serializers import TransactionMercanetSerializer
 
 CONFIG = BILLEVENT['MERCANET']
+
 
 def log(text):
     f = open('mercanet.log', 'a')
@@ -77,15 +78,16 @@ class MercanetViewSet:
         transactionReference = genId(id)
         mercanetToken = MercanetToken()
         mercanetToken.transactionReference = transactionReference
-        mercanetToken.save()    #on enregistre les infos et ça crée un token de transaction pour le serveur
+        mercanetToken.save()  # on enregistre les infos et ça crée un token de transaction pour le serveur
 
         response = HttpResponse()
         interfaceVersion = CONFIG['INTERFACE_VERSION']
         keyVersion = CONFIG['KEY_VERSION']
         merchantId = CONFIG['MERCHANT_ID']
-        normalReturnUrl = request.build_absolute_uri(urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
+        normalReturnUrl = request.build_absolute_uri(
+            urls.reverse('mercanet-check-payment', args=[transactionRequest.id]))
         urlMercanet = CONFIG['URL']
-        automaticResponseUrl = CONFIG['REPONSE_AUTO_URL']+str(mercanetToken.serverToken)
+        automaticResponseUrl = CONFIG['REPONSE_AUTO_URL'] + str(mercanetToken.serverToken)
         donneesPourMercanet = {
             'currencyCode': 978,
             'interfaceVersion': interfaceVersion,
@@ -98,21 +100,26 @@ class MercanetViewSet:
             'automaticResponseUrl': automaticResponseUrl
         }
         seal = sealTransaction.sealFromJson(donneesPourMercanet, CONFIG["SECRET_KEY"], False)
-        seal2 = sealTransaction.sealFromList([amount, automaticResponseUrl, 978, interfaceVersion, merchantId, normalReturnUrl, "INTERNET", transactionReference], CONFIG["SECRET_KEY"])
+        seal2 = sealTransaction.sealFromList(
+            ["978", interfaceVersion, keyVersion, merchantId, normalReturnUrl, "INTERNET", str(amount),
+             transactionReference, automaticResponseUrl], CONFIG["SECRET_KEY"])
         donneesPourMercanet['seal'] = seal
 
-        r = requests.post(urlMercanet, json=donneesPourMercanet,verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
+        r = requests.post(urlMercanet, json=donneesPourMercanet,
+                          verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = r.json()
         if reponseMercanet["redirectionStatusCode"] == "94":
             return HttpResponse("<h1 style='font-size: 100; color: red'>TRANSACTION   DUPLIQUÉE</h1>")
-        elif reponseMercanet["redirectionStatusCode"] == "12": return HttpResponse("<h1 style='font-size: 100; color: red'>ERREUR SEAL</h1>")
+        elif reponseMercanet["redirectionStatusCode"] == "12":
+            return HttpResponse("<h1 style='font-size: 100; color: red'>ERREUR SEAL</h1>")
         # reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON
         # pas besoin de parser; python-requests le fait tout seul
 
-        redirectionData = reponseMercanet["redirectionData"]  # on extrait les données à insérer dans la page pour le client
+        redirectionData = reponseMercanet[
+            "redirectionData"]  # on extrait les données à insérer dans la page pour le client
         redirectionUrl = reponseMercanet["redirectionUrl"]  # url que le client va appeler
         if (reponseMercanet[
-                "redirectionStatusCode"] == "00"):  # si la communication s'est bien passée (et le JSON n'est pas parsé en types)
+            "redirectionStatusCode"] == "00"):  # si la communication s'est bien passée (et le JSON n'est pas parsé en types)
             context = {
                 # charge les données dans la page qu'on renvoie au client, qui le redirigera vers le paiement MercaNET
                 "redirectionUrl": redirectionUrl,
@@ -158,8 +165,10 @@ class MercanetViewSet:
     def error(request):
         return HttpResponse("usage : /pay/$id/$token")
 
+
 @csrf_exempt
-def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
+def autoMercanet(request,
+                 head):  # gère la réponse automatique de MercaNET, seul moyen qu'on ait (dommage) de vérifier un paiement
     fichier = open('req.txt', 'a')
     r = request.POST
     Seal = r.get("Seal")
@@ -188,8 +197,9 @@ def autoMercanet(request, head):  # gère la réponse automatique de MercaNET, s
     mercanetToken = MercanetToken.objects.get(transactionReference=transactionReference)
     if mercanetToken.serverToken == head:
         log("Mercanet est correctement authentifié")
-    elif MercanetToken.objects.filter(transactionReference=transactionReference)[0] == head or MercanetToken.objects.filter(transactionReference=transactionReference)[1] == head:
-        log("entrées dupliquées !") # ça devrait pas arriver si on repart de 0 sur la BDD Mercanet
+    elif MercanetToken.objects.filter(transactionReference=transactionReference)[0] == head or \
+            MercanetToken.objects.filter(transactionReference=transactionReference)[1] == head:
+        log("entrées dupliquées !")  # ça devrait pas arriver si on repart de 0 sur la BDD Mercanet
     else:
         log("DANGER : MiTM attack ? Mercanet n'a pas répondu à la bonne adresse !!!!")
         exit(1)
