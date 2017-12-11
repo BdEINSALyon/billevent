@@ -44,7 +44,7 @@ class OptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Option
-        fields = ('id', 'name', 'type',
+        fields = ('id', 'name', 'type', 'description',
                   'price_ht', 'price_ttc',
                   'rules', 'seats', 'target',
                   'event', 'how_many_left')
@@ -65,7 +65,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = models.Product
         fields = ('id', 'name',
                   'price_ht', 'price_ttc',
-                  'rules', 'options', 'seats',
+                  'rules', 'options', 'seats', 'description',
                   'questions', 'event', 'how_many_left', 'categorie')
 
 

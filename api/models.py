@@ -122,6 +122,7 @@ class Pricing(models.Model):
     rules = models.ManyToManyField("PricingRule", blank=True)
     questions = models.ManyToManyField("Question", blank=True)
     event = models.ForeignKey(Event, verbose_name=_('Evènement'))
+    description = models.TextField(verbose_name=_('Description'), blank=True, null=True)
 
     def full_name(self):
         return '{} - {}€'.format(self.name, self.price_ttc)
