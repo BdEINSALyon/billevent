@@ -1,7 +1,21 @@
-Bonjour {{invitation.first_name}},
+Bonjour {{ invitation.first_name }},
 
-Vous avez été convié(e) à participer à l'évènement « {{invitation.event.name}} ».
+Vous avez été convié(e) à participer à l'évènement
+« {{ invitation.event.name }} ».
 L'accès à la billetterie se fait au moyen de ce lien :
-   {{ link }}
+{{ link }}
 
-L'équipe {{invitation.event.name}}
+En suivant ce lien, vous pourrez donc sélectionner les formules
+de votre choix pour vous et vos invités.
+
+Nous vous rappelons que vous avez le droit à {{ invitation.seats }} invité(s).
+Une fois les formules sélectionnées vous serez dirigé vers une
+plateforme de paiement sécurisée.
+
+Pour toutes questions n'hésitez pas à contacter notre équipe à
+l'adresse suivante: {{ invitation.event.organizer.email }}.
+
+Dans l'attente de vous retrouver,
+
+--
+L'équipe {{ invitation.event.name }}
