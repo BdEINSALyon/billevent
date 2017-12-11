@@ -276,6 +276,8 @@ class PricingRule(models.Model):
     value = models.IntegerField()
 
     def __str__(self):
+        if self.description:
+            return self.description
         return str(self.type) + " " + str(self.value)
 
     def validate(self, order):
