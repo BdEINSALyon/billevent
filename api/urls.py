@@ -10,6 +10,7 @@ router.register(r'products', views.ProductViewSet, 'products')
 router.register(r'options', views.OptionViewSet, 'options')
 router.register(r'billets', views.BilletViewSet, 'billet')
 router.register(r'order', views.OrderViewSet, 'orders')
+router.register(r'compostages',views.CompostageViewSet,'compostages')
 
 admin_router = routers.SimpleRouter()
 admin_router.register(r'events', admin.EventViewSet, 'events')
@@ -19,6 +20,7 @@ admin_router.register(r'invitations', admin.InvitationViewSet, 'invitations')
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
+    url(r'^billetcheck/', views.billet_check),
     url(r'^authenticate/invitation$', views.InvitationAuthentication.as_view()),
     url(r'^authenticate$', obtain_jwt_token),
     url(r'^authenticate/refresh$', refresh_jwt_token),

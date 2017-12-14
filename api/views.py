@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 
 from django.core.exceptions import ValidationError
-from django.core.signing import TimestampSigner
+from django.core.signing import TimestampSigner, Signer
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
-from rest_framework.decorators import detail_route, authentication_classes, permission_classes
+from rest_framework.decorators import detail_route, authentication_classes, permission_classes, api_view
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,9 +16,10 @@ from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption, Compostage
+from api.permissions import IsEventManager
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer, \
-    AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer, UserSerializer
+    AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer, UserSerializer, CompostageSerializer
 from mercanet.models import TransactionRequest
 from .serializers import EventSerializer, OrderSerializer, OptionSerializer, \
     ProductSerializer
@@ -27,7 +28,29 @@ from django import urls
 plus_disponible_view = Response("Ce que vous demandez n'est plus disponible", status=status.HTTP_200_OK)
 invalid_request_view = Response("Requête invalide, les paramètres spécifiés dans le POST sont non conformes",
                                 status=status.HTTP_400_BAD_REQUEST)
+@csrf_exempt
+@api_view(['GET','POST'])
+@permission_classes((IsEventManager,))
+@detail_route(methods=["POST"])
+def billet_check(request):
+    """
+    Prend en paramètre POST id l'id signé du billet. Nécessite d'être authentifié en tant que manager de l'évenement
 
+    :return: Le billet si il existe.
+    """
+    data = request.POST['id']
+    id = Signer().unsign(data)
+
+    return Response(BilletSerializer(Billet.objects.get(id=id)).data)
+
+class CompostageViewSet(viewsets.ModelViewSet):
+    """
+    Le viewset pour les compostages: @see le model Compostage
+    @TODO Rajouter un contrôle pour ne pas valider deux fois dans la même file le même billet
+    """
+    queryset = Compostage.objects.all()
+    serializer_class = CompostageSerializer
+    permission_classes = [IsEventManager]
 
 class EventsViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()

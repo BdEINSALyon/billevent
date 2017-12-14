@@ -16,6 +16,9 @@ from . import models
                 models.Categorie,
                 models.Client,
                 models.Order,
-                models.Participant)
+                models.Participant,
+                models.Compostage,
+                models.File,
+                )
 class BasicAdmin(admin.ModelAdmin):
     pass
