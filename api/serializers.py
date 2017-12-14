@@ -3,8 +3,14 @@ from rest_framework import serializers
 from rest_framework.relations import PrimaryKeyRelatedField
 
 from api import models
-from api.models import Billet, Product, Option
+from api.models import Billet, Product, Option, Compostage
 
+
+class CompostageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Compostage
+        fields = ("id","billet","file")
+        depth = 0
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

@@ -19,6 +19,39 @@ TARGETS = (
 )
 
 
+class File(models.Model):
+    """
+    Représente un file de lecture de billet
+    """
+    VALIDATION_MODES = (
+        (0, "Aucun mode défini"),
+        (1, "Validation de produits"),
+        (2, "Validation d'options"),
+    )
+
+    nom = models.CharField(max_length=100)
+    event = models.ForeignKey('Event')
+    active = models.BooleanField(default=False)
+    file_parente = models.ForeignKey('File', null=True, blank=True)
+    product_type = models.ManyToManyField('Product', blank=True)
+    option_type = models.ManyToManyField('Option', blank=True)
+    validation_type = models.IntegerField(choices=VALIDATION_MODES, default=0)
+
+    def __str__(self):
+        return "File {}".format(self.nom)
+
+class Compostage(models.Model):
+    """
+    Fait la liaison entre les files et les billets.
+    """
+    billet = models.ForeignKey("Billet")
+    file = models.ForeignKey("File")
+    date = models.DateTimeField(auto_created=True,auto_now_add=True)
+
+    def __str__(self):
+        return "Billet "+ str(self.billet.id) +" validé à la file "+ str(self.file.nom)
+
+
 class Membership(models.Model):
     LEVEL_ADMIN = 0
     LEVEL_MANAGER = 100
@@ -134,7 +167,7 @@ class Pricing(models.Model):
             return billets.filter(product=self).aggregate(total=Count('id'))['total']
         if type(self) is Option:
             return BilletOption.objects.filter(billet__in=billets, option=self) \
-                .aggregate(total=Sum('amount'))['total'] or 0
+                       .aggregate(total=Sum('amount'))['total'] or 0
 
     def reserved_seats(self, billets=None):
         return self.reserved_units(billets) * (self.seats or 1)
@@ -241,6 +274,7 @@ class Billet(models.Model):
     product = models.ForeignKey(Product, null=True, blank=True, related_name='billets')
     options = models.ManyToManyField(Option, through=BilletOption, related_name='billets')
     order = models.ForeignKey('Order', null=True, related_name='billets')
+    files = models.ManyToManyField(File,through='Compostage',blank=True)
 
     @staticmethod
     def validated():
@@ -347,7 +381,6 @@ class Question(models.Model):
 
 
 class Answer(models.Model):
-
     order = models.ForeignKey('Order', related_name='answers')
     question = models.ForeignKey(Question)
     participant = models.ForeignKey(Participant, null=True, blank=True)
@@ -434,7 +467,7 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True, related_name="orders")
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
-    transaction = models.ForeignKey(TransactionRequest,default=None, null=True)
+    transaction = models.ForeignKey(TransactionRequest, default=None, null=True)
     event = models.ForeignKey(Event)
 
     def destroy_all(self):
@@ -508,5 +541,3 @@ def update_order_on_card_transaction(instance, **kwargs):
         order.save()
     except Order.DoesNotExist:
         pass
-
-
