@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption, Compostage
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, File, BilletOption, Compostage
 from api.permissions import IsEventManager
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer, \
     AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer, UserSerializer, CompostageSerializer
@@ -46,11 +46,26 @@ def billet_check(request):
 class CompostageViewSet(viewsets.ModelViewSet):
     """
     Le viewset pour les compostages: @see le model Compostage
-    @TODO Rajouter un contrôle pour ne pas valider deux fois dans la même file le même billet
-    """
+       """
     queryset = Compostage.objects.all()
     serializer_class = CompostageSerializer
     permission_classes = [IsEventManager]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            file = File.objects.get(id=request.POST['file'])
+
+            if Compostage.objects.filter(billet=request.POST["billet"], file=file.id).count()>0:
+                return Response("Attention ! Ce billet a déja été validé")
+
+            compostage = Compostage(billet=Billet.objects.get(id=request.POST["billet"]),file=file)
+            compostage.save()
+            return Response(CompostageSerializer(compostage).data)
+        except File.DoesNotExist as e:
+            return Response("La file demandée n'existe pas !")
+        except Billet.DoesNotExist as e:
+            return Response("le billet demandé n'existe pas !")
+
 
 class EventsViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
