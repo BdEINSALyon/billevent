@@ -25,6 +25,13 @@ class PricingRuleSerializer(serializers.ModelSerializer):
         fields = ('id', 'type', 'value')
 
 
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        read_only = True
+        model = models.Coupon
+        fields = ('id', 'percentage', 'amount', 'description')
+
+
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         read_only = True
@@ -148,10 +155,11 @@ class OrderSerializer(serializers.ModelSerializer):
     billets = BilletForOrderSerializer(many=True, read_only=True)
     answers = AnswerSerializer(many=True, read_only=True)
     client = ClientSerializer(read_only=True)
+    coupon = CouponSerializer(read_only=True)
 
     class Meta:
         model = models.Order
-        fields = ('id', 'client', 'event', 'billets', 'status', 'answers')
+        fields = ('id', 'client', 'event', 'billets', 'status', 'answers', 'coupon')
         depth = 2
 
 

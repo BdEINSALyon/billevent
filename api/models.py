@@ -134,7 +134,7 @@ class Pricing(models.Model):
             return billets.filter(product=self).aggregate(total=Count('id'))['total']
         if type(self) is Option:
             return BilletOption.objects.filter(billet__in=billets, option=self) \
-                .aggregate(total=Sum('amount'))['total'] or 0
+                       .aggregate(total=Sum('amount'))['total'] or 0
 
     def reserved_seats(self, billets=None):
         return self.reserved_units(billets) * (self.seats or 1)
@@ -312,6 +312,18 @@ class PricingRule(models.Model):
         return list(set(Product.objects.filter(rules=self)).union(set(Option.objects.filter(rules=self))))
 
 
+class Coupon(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    code = models.CharField(max_length=20)
+    description = models.CharField(max_length=255)
+    max_use = models.IntegerField(default=0)
+    percentage = models.FloatField(verbose_name=_('pourcentage'), help_text=_('entre 0 et 1'), default=0, blank=True)
+    amount = models.FloatField(verbose_name=_('montant'), help_text=_('en euros'), default=0, blank=True)
+
+    def __str__(self):
+        return '{} - {} (-{}€ et -{}%)'.format(self.code, self.description, self.amount, self.percentage * 100)
+
+
 class Participant(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -347,7 +359,6 @@ class Question(models.Model):
 
 
 class Answer(models.Model):
-
     order = models.ForeignKey('Order', related_name='answers')
     question = models.ForeignKey(Question)
     participant = models.ForeignKey(Participant, null=True, blank=True)
@@ -433,8 +444,9 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     client = models.ForeignKey(Client, blank=True, null=True, related_name="orders")
+    coupon = models.ForeignKey(Coupon, blank=True, null=True, related_name="orders")
     status = models.IntegerField(verbose_name=_('status'), default=0, choices=STATUSES)
-    transaction = models.ForeignKey(TransactionRequest,default=None, null=True)
+    transaction = models.ForeignKey(TransactionRequest, default=None, null=True)
     event = models.ForeignKey(Event)
 
     def destroy_all(self):
@@ -443,6 +455,10 @@ class Order(models.Model):
                 option.delete()
             billet.delete()
         self.delete()
+
+    def can_use_coupon(self, coupon):
+        return (coupon.max_use <= 0 or
+                Order.objects.filter(coupon=coupon, created_at__lt=self.created_at).count() < coupon.max_use)
 
     @property
     def option_billet(self):
@@ -461,6 +477,9 @@ class Order(models.Model):
         pricings_sold_into_that_order = self.sold_products
         for pricing in list(pricings_sold_into_that_order):
             amount += pricing.reserved_units(self.billets.all()) * pricing.price_ttc
+        if self.coupon_id:
+            amount -= self.coupon.amount
+            amount *= 1 - self.coupon.percentage
         return amount
 
     @property
@@ -469,6 +488,9 @@ class Order(models.Model):
         pricings_sold_into_that_order = self.sold_products
         for pricing in list(pricings_sold_into_that_order):
             amount += pricing.reserved_units(self.billets.all()) * pricing.price_ht
+        if self.coupon_id:
+            amount -= self.coupon.amount
+            amount *= 1 - self.coupon.percentage
         return amount
 
     @property
@@ -508,5 +530,3 @@ def update_order_on_card_transaction(instance, **kwargs):
         order.save()
     except Order.DoesNotExist:
         pass
-
-

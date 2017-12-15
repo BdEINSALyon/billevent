@@ -109,7 +109,7 @@ class MercanetViewSet:
                           verify=False)  # on envoie les données à Mercanet et on enregistre sa réponse
         reponseMercanet = r.json()
         if reponseMercanet["redirectionStatusCode"] == "94":
-            return HttpResponse("<h1 style='font-size: 100; color: red'>TRANSACTION   DUPLIQUÉE</h1>")
+            return HttpResponse("<h1 style='font-size: 100; color: red'>TRANSACTION DUPLIQUÉE</h1>")
         elif reponseMercanet["redirectionStatusCode"] == "12":
             return HttpResponse("<h1 style='font-size: 100; color: red'>ERREUR SEAL</h1>")
         # reponseMercanet = json.loads(r.read().decode(r.info().get_param('charset') or 'utf-8')) #on parse le JSON

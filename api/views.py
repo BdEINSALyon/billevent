@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
 
 from api import permissions
-from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption
+from api.models import Event, Order, Option, Product, Billet, Categorie, Invitation, Client, BilletOption, Coupon
 from api.serializers import BilletSerializer, CategorieSerializer, InvitationSerializer, ParticipantSerializer, \
     AnswerSerializer, BilletOptionSerializer, BilletOptionInputSerializer, UserSerializer
 from mercanet.models import TransactionRequest
@@ -146,6 +146,16 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Order.objects.filter(client__user=self.request.user)
+
+    @detail_route(methods=['post'])
+    def coupon(self, request, **kwargs):
+        order = self.get_object()
+        code = Coupon.objects.get(code=request.data['code'], event=order.event)
+        if order.can_use_coupon(code):
+            order.coupon = code
+            order.save()
+            return Response(OrderSerializer(order).data)
+        return Response(status=404)
 
     @detail_route(methods=['post'])
     def participants(self, request, pk):
