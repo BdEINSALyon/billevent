@@ -15,6 +15,7 @@ admin_router = routers.SimpleRouter()
 admin_router.register(r'events', admin.EventViewSet, 'events')
 admin_router.register(r'organizers', admin.OrganizerViewSet, 'organizers')
 admin_router.register(r'invitations', admin.InvitationViewSet, 'invitations')
+admin_router.register(r'billets', admin.BilletsViewSet, 'billets-admin')
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
