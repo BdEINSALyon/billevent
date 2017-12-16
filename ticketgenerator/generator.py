@@ -1,6 +1,8 @@
 from django.core.signing import Signer
 from django.http import HttpResponse
 from datetime import datetime
+
+from django.utils.formats import date_format
 from reportlab.graphics import renderPDF
 from reportlab.lib.utils import ImageReader
 from reportlab.graphics.barcode import eanbc, qr, code128
@@ -14,10 +16,8 @@ from api.models import BilletOption
 
 
 def generate(order):
-
     # Create the HttpResponse object with the appropriate PDF headers.
     response = HttpResponse(content_type='application/pdf')
-    #response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
 
     # Create the PDF object, using the response object as its "file."
     p = canvas.Canvas(response, pagesize=A4)
@@ -47,7 +47,7 @@ def generate(order):
         qr_y = ba_height + qr_height
         if event.ticket_background:
             p.drawImage(ImageReader(event.ticket_background), 0 * mm, 0 * mm, width=A4[0], height=A4[1],
-                        mask='auto', preserveAspectRatio=True)
+                        mask='auto', preserveAspectRatio=False)
         p.setFont("Helvetica", 12)
         p.setStrokeColorRGB(255, 255, 255)
         p.setFillColorRGB(255, 255, 255)
@@ -64,8 +64,9 @@ def generate(order):
         i = -10
         for participant in participants:
             i += 10
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{} {}".format(participant.last_name, participant.first_name))
-            billet_options = BilletOption.objects.filter(participant = participant)
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm,
+                         "{} {}".format(participant.last_name, participant.first_name))
+            billet_options = BilletOption.objects.filter(participant=participant)
             for billet_option in billet_options:
                 options_number += 1
                 i += 10
@@ -73,7 +74,8 @@ def generate(order):
                 option_name = option.name
                 amount = billet_option.amount
                 price += option.price_ttc * amount
-                p.drawString((20 + 10) * mm, A4[1] - qr_y - (20 + i + 10) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
+                p.drawString((20 + 10) * mm, A4[1] - qr_y - (20 + i + 10) * mm,
+                             "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
         billet_options = BilletOption.objects.filter(billet=billet).exclude(participant__isnull=False)
         for billet_option in billet_options:
             options_number += 1
@@ -82,23 +84,32 @@ def generate(order):
             option_name = option.name
             amount = billet_option.amount
             price += option.price_ttc * amount
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm, "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 20) * mm,
+                         "{} * {} : {} €".format(amount, option_name, option.price_ttc * amount))
         if product:
             i += 10
-            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm, "=> {} : {} €".format(product.name, product.price_ttc))
-        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Prix TTC : {} €".format(price))
-        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Date d'émission : {}".format(datetime.now().date()))
-        p.setFont("Helvetica-Bold", 25)
-        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10) * mm, "{}".format(event.name))
-        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 15) * mm, "{} - {}".format(event.start_time.date(), event.end_time.date()))
-        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 30) * mm, "{}".format(event.place))
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 10) * mm,
+                         "> {} : {} €".format(product.name, product.price_ttc))
         p.setFont("Helvetica", 12)
+        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 30) * mm, "Prix TTC : {} €".format(price))
+        p.drawString(20 * mm, A4[1] - qr_y - (20 + i + 40) * mm, "Date d'émission : {}".format(
+            date_format(datetime.now(), "SHORT_DATE_FORMAT"))
+                     )
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 20) * mm, "{}".format(event.name))
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 15 + 15) * mm, "{}".format(
+            date_format(event.start_time.date(), "SHORT_DATE_FORMAT")))
+        p.setFont("Helvetica", 12)
+        p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 30) * mm, "{}".format(event.place))
         p.drawString(ba_width + (20 + 5) * mm, A4[1] - (20 + 10 + 40) * mm, "{}".format(event.address))
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 20) * mm, "Numéro : {}".format(billet.id))
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 30) * mm, "Organisateur : {}".format(organizer.name))
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 40) * mm, "Acheteur : {} {}".format(client.last_name, client.first_name))
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 50) * mm, "Date de commande : {}".format(order.updated_at.date()))
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 60) * mm, "Numéro de commande : {}".format(order.id))
+        p.drawString(ba_width + (20 + 8) * mm, A4[1] - qr_y - (20 + 20) * mm,
+                     "Billet #{}-{}-{}".format(event.id, order.id, billet.id))
+        p.drawString(ba_width + (20 + 8) * mm, A4[1] - qr_y - (20 + 30) * mm,
+                     "Organisateur : {}".format(organizer.name))
+        p.drawString(ba_width + (20 + 8) * mm, A4[1] - qr_y - (20 + 40) * mm,
+                     "Acheteur : {} {}".format(client.last_name, client.first_name))
         if len(participants) > 0:
             validity = "personnes"
             persons_number = len(participants)
@@ -109,8 +120,9 @@ def generate(order):
             persons_number = ""
             if options_number < 2:
                 validity = "Option"
-        p.drawString(ba_width + (20 + 20) * mm, A4[1] - qr_y - (20 + 70) * mm, "Valable pour : {} {}".format(persons_number, validity))
-        p.drawString(20 * mm, 40 * mm, "Billet vendu et édité par le {}, {}".format(organizer.name, organizer.address))
+        p.drawString(ba_width + (20 + 8) * mm, A4[1] - qr_y - (20 + 50) * mm,
+                     "Valable pour : {} {}".format(persons_number, validity))
+        p.drawString(20 * mm, 40 * mm, "Billet vendu et édité par : {}, {}".format(organizer.name, organizer.address))
         p.drawString(20 * mm, 30 * mm, "Tél : {}".format(organizer.phone))
         p.drawString(20 * mm, 20 * mm, "Courriel : {}".format(organizer.email))
         # Close the PDF object cleanly.
