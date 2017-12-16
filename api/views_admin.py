@@ -98,3 +98,19 @@ class BilletsViewSet(viewsets.ReadOnlyModelViewSet):
             'counts': count,
             'products': serializers.ProductSerializer(self.products_for_order().all(), many=True).data
         })
+
+    @list_route(methods=['get'])
+    def count(self, *args):
+        count = (self.get_queryset().aggregate(total=Count('id')))
+        return Response({
+            'counts': count,
+            'products': serializers.ProductSerializer(self.products_for_order().all(), many=True).data
+        })
+
+    @list_route(methods=['get'])
+    def countSeats(self, *args):
+        count = (self.get_queryset().aggregate(total=Sum('product__seats')))
+        return Response({
+            'counts': count,
+            'products': serializers.ProductSerializer(self.products_for_order().all(), many=True).data
+        })
