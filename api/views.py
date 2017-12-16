@@ -150,6 +150,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['post'])
     def coupon(self, request, **kwargs):
         order = self.get_object()
+        req_code = request.data['code']
+        if not req_code or req_code == '':
+            order.coupon = None
+            order.save()
+            return Response(OrderSerializer(order).data)
         code = Coupon.objects.get(code=request.data['code'], event=order.event)
         if order.can_use_coupon(code):
             order.coupon = code
@@ -269,18 +274,25 @@ class OrderViewSet(viewsets.ModelViewSet):
         # On récupère l'url de callback pour mercanet (Je sais pas ce que c'est mais c'est le front qui me l'envoie)
         callback = request.data['callback']
 
-        # On crée une requête de transaction
-        transaction_request = TransactionRequest(callback=callback, amount=order.amount * 100)
-        transaction_request.save()
+        amount = order.amount
 
-        # On change le statut de la commande à payé
-        order.status = order.STATUS_PAYMENT
-        order.transaction = transaction_request
-        order.save()
+        if amount > 0:
+            # On crée une requête de transaction
+            transaction_request = TransactionRequest(callback=callback, amount=amount * 100)
+            transaction_request.save()
 
-        # On renvoie l'url de paiement
-        return Response(request.build_absolute_uri(
-            urls.reverse('mercanet-pay', args=[transaction_request.id, transaction_request.token])))
+            # On change le statut de la commande à payé
+            order.status = order.STATUS_PAYMENT
+            order.transaction = transaction_request
+            order.save()
+
+            # On renvoie l'url de paiement
+            return Response(request.build_absolute_uri(
+                urls.reverse('mercanet-pay', args=[transaction_request.id, transaction_request.token])))
+        else:
+            order.status = order.STATUS_VALIDATED
+            order.save()
+            return Response(status=201)
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):

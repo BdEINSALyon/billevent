@@ -449,6 +449,19 @@ class Order(models.Model):
     transaction = models.ForeignKey(TransactionRequest, default=None, null=True)
     event = models.ForeignKey(Event)
 
+    @staticmethod
+    def accountable_orders():
+        """
+        Définie les commandes devant être prises en compte dans le cadre de calcules de stock
+        :return:
+        """
+        return (
+                Order.objects.filter(status=Order.STATUS_VALIDATED) |
+                Order.objects.filter(
+                    status__lt=Order.STATUS_VALIDATED,
+                    created_at__gte=timezone.now() - timedelta(minutes=20))
+        )
+
     def destroy_all(self):
         for billet in self.billets.all():
             for option in billet.billet_options.all():
@@ -458,7 +471,10 @@ class Order(models.Model):
 
     def can_use_coupon(self, coupon):
         return (coupon.max_use <= 0 or
-                Order.objects.filter(coupon=coupon, created_at__lt=self.created_at).count() < coupon.max_use)
+                Order.accountable_orders().filter(
+                    coupon=coupon,
+                    created_at__lt=self.created_at
+                ).count() < coupon.max_use)
 
     @property
     def option_billet(self):
@@ -473,13 +489,13 @@ class Order(models.Model):
 
     @property
     def amount(self):
-        amount = 0
+        amount = 0.0
         pricings_sold_into_that_order = self.sold_products
         for pricing in list(pricings_sold_into_that_order):
-            amount += pricing.reserved_units(self.billets.all()) * pricing.price_ttc
+            amount += float(pricing.reserved_units(self.billets.all()) * pricing.price_ttc)
         if self.coupon_id:
-            amount -= self.coupon.amount
-            amount *= 1 - self.coupon.percentage
+            amount -= float(self.coupon.amount)
+            amount *= float(1 - self.coupon.percentage)
         return amount
 
     @property
