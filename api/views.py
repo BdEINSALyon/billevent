@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
 from rest_framework.decorators import detail_route, authentication_classes, permission_classes, api_view
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.settings import api_settings
@@ -30,7 +30,7 @@ invalid_request_view = Response("Requête invalide, les paramètres spécifiés 
                                 status=status.HTTP_400_BAD_REQUEST)
 @csrf_exempt
 @api_view(['GET','POST'])
-@permission_classes((IsEventManager,))
+@permission_classes((AllowAny,))
 @detail_route(methods=["POST"])
 def billet_check(request):
     """
@@ -38,7 +38,7 @@ def billet_check(request):
 
     :return: Le billet si il existe.
     """
-    data = request.POST['id']
+    data = request.data['id']
     id = Signer().unsign(data)
 
     return Response(BilletSerializer(Billet.objects.get(id=id)).data)
@@ -49,16 +49,16 @@ class CompostageViewSet(viewsets.ModelViewSet):
        """
     queryset = Compostage.objects.all()
     serializer_class = CompostageSerializer
-    permission_classes = [IsEventManager]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         try:
-            file = File.objects.get(id=request.POST['file'])
+            file = File.objects.get(id=request.data['file'])
 
-            if Compostage.objects.filter(billet=request.POST["billet"], file=file.id).count()>0:
+            if Compostage.objects.filter(billet=request.data["billet"], file=file.id).count()>0:
                 return Response("Attention ! Ce billet a déja été validé")
 
-            compostage = Compostage(billet=Billet.objects.get(id=request.POST["billet"]),file=file)
+            compostage = Compostage(billet=Billet.objects.get(id=request.data["billet"]),file=file)
             compostage.save()
             return Response(CompostageSerializer(compostage).data)
         except File.DoesNotExist as e:
