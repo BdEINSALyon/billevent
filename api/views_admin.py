@@ -19,6 +19,12 @@ class EventViewSet(viewsets.ModelViewSet):
         return (Event.objects.filter(organizer__membership__user=self.request.user) |
                 Event.objects.filter(membership__user=self.request.user))
 
+    @detail_route(methods=['get'])
+    def products(self, *args, **kargs):
+        return Response(
+            serializers.ProductSerializer(Product.objects.filter(event=self.get_object()), many=True).data
+        )
+
 
 class OrganizerViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.OrganizerSerializer
