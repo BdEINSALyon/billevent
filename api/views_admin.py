@@ -120,3 +120,36 @@ class BilletsViewSet(viewsets.ReadOnlyModelViewSet):
             'counts': count,
             'products': serializers.ProductSerializer(self.products_for_order().all(), many=True).data
         })
+
+
+class OrdersViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.OrderSerializer
+    permission_classes = [permissions.IsEventManager]
+
+    def get_queryset(self):
+        base = Order.objects.filter(
+            event__organizer__membership__user=self.request.user) | Billet.objects.filter(
+            event__membership__user=self.request.user)
+        if 'status' in self.request.GET:
+            status = self.request.GET.get('status', '')
+            base = base.filter(id__in=Order.accountable_orders())
+            if status == 'accountable':
+                pass
+            elif status == 'validated':
+                base = base.filter(id_in=Order.objects.filter(status=Order.STATUS_VALIDATED))
+        if 'event' in self.request.GET:
+            event = self.request.GET.get('event', '')
+            event = self.allowed_events().get(id=event)
+            base = base.filter(event=event)
+        if 'products' in self.request.GET:
+            products = self.products_for_order()
+            base = base.filter(billets__product__in=products)
+        return base
+
+    def products_for_order(self):
+        return Product.objects.filter(event=self.allowed_events(),
+                                      id__in=self.request.GET.get('products', '').split(','))
+
+    def allowed_events(self):
+        return (Event.objects.filter(organizer__membership__user=self.request.user) |
+                Event.objects.filter(membership__user=self.request.user))

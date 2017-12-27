@@ -130,14 +130,13 @@ class SimpleOrderSerializer(serializers.ModelSerializer):
 
 class BilletSerializer(serializers.ModelSerializer):
     product = ProductSerializer(many=False)
-    options = PrimaryKeyRelatedField(many=True, read_only=True)
     participants = ParticipantSerializer(many=True)
     billet_options = BilletOptionSerializer(many=True)
     order = SimpleOrderSerializer(read_only=True)
 
     class Meta:
         model = models.Billet
-        fields = ('id', 'product', 'options', 'billet_options', 'participants', 'order')
+        fields = ('id', 'product', 'billet_options', 'participants', 'order')
         depth = 2
 
 
@@ -149,7 +148,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Order
-        fields = ('id', 'client', 'event', 'billets', 'status', 'answers')
+        fields = ('id', 'client', 'event', 'billets', 'status', 'amount', 'answers')
         depth = 2
 
 
